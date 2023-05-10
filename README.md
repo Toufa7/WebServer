@@ -8,12 +8,12 @@ OOP in our Webserver :
 	// Setuping and startig the server : Creating socket -> binding -> listening (Handling multiple clients)
 	}
   
-  	class Response
+  	class Handler
   	{
-	// Sending the response header and the body 
+	// Parse request -> validate request content -> match methed --> send response
 	}
 	
-	class Request
+	class Client
   	{
-	// Parsing and extracting infos (url path, headers ...) from the request
+	// Everything related to each client : ...(not sure yet)
   	}
