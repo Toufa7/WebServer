@@ -2,7 +2,7 @@ NAME = Server
 
 CPP	 = c++
 
-CPP_FLAGS = -Wall -Wextra -Werror -std=c++98
+CPP_FLAGS = -std=c++98
 
 FILES = server.cpp \
 
