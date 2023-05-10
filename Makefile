@@ -1,19 +1,30 @@
 NAME = Server
+CFLAGS = c++ -std=c++98 -Wall -Wextra -Werror 
 
-CPP	 = c++
+FILES = main.cpp \
+	srcs/Server.cpp \
+	srcs/Handler.cpp \
+	#srcs/Client.cpp
 
-CPP_FLAGS = -std=c++98
+HEADERS = includes/Server.hpp \
+	includes/Client.hpp \
+	includes/Handler.hpp
+OBJS = $(FILES:.cpp=.o)
 
-FILES = server.cpp \
+all : $(NAME)
 
-all	: $(NAME)
+$(NAME): $(OBJS) $(HEADERS)
+		$(CFLAGS) $(OBJS) -o $(NAME)
 
-$(NAME) : $(FILES)
-		$(CPP) $(CPP_FLAGS) $(FILES) -o $(NAME)
+%.o: %.cpp
+	$(CFLAGS) -c $< -o $@
 
-RM = rm -rf
+clean:
+	rm -f $(OBJS)
 
-clean :
-		$(RM) $(NAME)
+fclean: clean
+	rm -f $(NAME)
 
-re		: clean all
+re: fclean all
+
+.PHONY : clean all fclean re

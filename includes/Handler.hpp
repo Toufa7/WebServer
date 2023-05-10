@@ -1,8 +1,10 @@
 #ifndef HANDLER_HPP
 #define HANDLER_HPP
 
-#include <vector>
+#include <iostream>
 #include <map>
+#include <cstring>
+#include <sstream>
 
 class Handler
 {
@@ -10,10 +12,12 @@ class Handler
 		Handler();
 		~Handler();
 
-		void	parseRequest();
-		void	parseBody();
+		void	parseRequest(char *req);
+		void	parseBody(char *body);
 
 	private:
+    	std::map<std::string, std::string> _request;
+
 		void	handlePost();
 		void	handleGet();
 		void	handleDelete();
