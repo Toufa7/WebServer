@@ -1,0 +1,5 @@
+HTTP/1.1 200 OK\r\n
+Server: Allah Y7ssen L3wan\r\n
+Vary: Accept-Encoding\r\n
+Content-Type: image/jpeg\r\n\r\n
+Content-Length: 68438\r\n

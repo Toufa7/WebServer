@@ -24,27 +24,21 @@ class   Server
 
         void    SendResponse()
         {
-            // std::ifstream   input;
-            // std::string     response;
+            int fildes = open("./header.txt", O_RDONLY);
+            char buff[136];
+            read(fildes, buff, 136);
+            msg_sent = send(client_socket, buff, sizeof(buff), 0);
 
+            int fildes1 = open("./poms.jpeg", O_RDONLY);
+            char bufff[74605];
+            read(fildes1, bufff, 74605);
+            msg_sent = send(client_socket, bufff, sizeof(bufff), 0);
 
-            // input.open("homepage.html");
-            // if (input.is_open())
-            // {
-            //     while(std::getline(input, response));
-            //         input.close();
-            // }
-            std::string response = "HTTP/1.1 200 OK\r\n"
-                                    "Server: Allah Y7ssen L3wan\r\n"
-                                    "Content-Type: text/html\r\n\r\n"
-                                    "<h1>Salaam!</h1>";
             
-            if ((msg_sent = send(client_socket, response.c_str(), response.length(), 0)) < 0)
-            {
-                std::cerr << "Error : Sending failed\n";
-                exit(1);
-            }
+            close(fildes);
+            close(fildes1);
         }
+
     
         void    GetRequest()
         {
@@ -63,6 +57,13 @@ class   Server
                 std::cerr << "Error: Creating socket failed\n";
                 exit(1);
             }
+            int optval = 1;
+            /*
+                * option to enable the reuse of local addresses /
+                * used to set or get socket-level options that are not specific to any particular protocol or layer. /
+                * socket-level options include
+            */
+            setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
             if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
             {
                 std::cerr << "Error: Binding failed\n";
@@ -93,10 +94,12 @@ class   Request : public Server
         std::string path;
         std::string method;
         std::map<std::string, std::string> request;
+        std::string header;
 
         void    PrintRequest(char *req)
         {
-            std::cout << req;
+            header = req;
+            std::cout << header;
         }
 };
 
