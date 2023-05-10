@@ -1,2 +1,5 @@
 ./Subject.pdf
 Server
+*.o
+*/*.o
+.vscode
