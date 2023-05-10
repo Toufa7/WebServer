@@ -24,19 +24,34 @@ class   Server
 
         void    SendResponse()
         {
-            int fildes = open("./header.txt", O_RDONLY);
-            char buff[136];
-            read(fildes, buff, 136);
-            msg_sent = send(client_socket, buff, sizeof(buff), 0);
-
-            int fildes1 = open("./poms.jpeg", O_RDONLY);
-            char bufff[74605];
-            read(fildes1, bufff, 74605);
-            msg_sent = send(client_socket, bufff, sizeof(bufff), 0);
-
-            
-            close(fildes);
-            close(fildes1);
+            char response_header[1024] = "HTTP/1.1 200 OK\r\n"
+                                        "Server: Allah Y7ssen L3wan\r\n"
+                                        "Content-Length: 68438\r\n"
+                                        "Content-Type: image/png\r\n"
+                                        "Connection: close\r\n\r\n";
+            if (send(client_socket, response_header, strlen(response_header), 0) == -1)
+            {   
+                std::cerr << "Error : Receiving failed\n";
+                exit(1);
+            }
+            int fd = open("./poms.jpeg", O_RDONLY);
+            if (fd == -1)
+            {
+                std::cerr << "Error : Opening failed\n";
+                exit(1);
+            }
+            char response_body[68438];
+            int nbyte = read(fd, response_body, 68438);
+            if (nbyte == -1)
+            {
+                std::cerr << "Error : Reading failed\n";
+                exit(1);
+            }
+            if (send(client_socket, response_body, nbyte, 0) == -1)
+            {   
+                std::cerr << "Error : Receiving failed\n";
+                exit(1);
+            }
         }
 
     
@@ -93,14 +108,36 @@ class   Request : public Server
     public:
         std::string path;
         std::string method;
+        std::string status_line;
         std::map<std::string, std::string> request;
         std::string header;
 
+        
         void    PrintRequest(char *req)
         {
             header = req;
             std::cout << header;
         }
+
+        void  ParseRequest(char *req)
+        {
+            int delimiter_position;
+            std::string current_line, key, value;
+            std::stringstream request_stream(req);
+
+            std::getline(request_stream, status_line); //status line
+            while ( getline(request_stream >> std::ws >> std::skipws, current_line, '\n') )
+            {
+                current_line.erase(std::remove(current_line.begin(), current_line.end(), '\r'), current_line.end());    //remove every occurence of '/r' in line
+                delimiter_position = current_line.find(':');
+                key = current_line.substr(0, delimiter_position);                           
+                value = current_line.substr(delimiter_position + 1, current_line.length());
+                request[key] = value;   //storing key and value in map
+                key.erase();    //erase key and value
+                value.erase();  //for next iteration
+            }
+        }
+      
 };
 
 class   Response : public Server
@@ -117,7 +154,8 @@ int main()
     Request Parsing;
 
     WebServer.Start();
-    Parsing.PrintRequest(WebServer.requested_data);
+    //Parsing.PrintRequest(WebServer.requested_data);
+    Parsing.ParseRequest(WebServer.requested_data);
 
     return (0);
 }
