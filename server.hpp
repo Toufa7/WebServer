@@ -11,6 +11,8 @@
 #include <string>
 #include <fstream>
 #include <map>
+#include <cstring>
+#include <sstream>
 
 
 

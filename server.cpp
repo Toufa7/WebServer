@@ -34,12 +34,12 @@ class   Server
             //     while(std::getline(input, response));
             //         input.close();
             // }
-            std::string response = "HTTP/1.1 200 OK\r\n"
+            char response[256] = "HTTP/1.1 200 OK\r\n"
                                     "Server: Allah Y7ssen L3wan\r\n"
                                     "Content-Type: text/html\r\n\r\n"
                                     "<h1>Salaam!</h1>";
             
-            if ((msg_sent = send(client_socket, response.c_str(), response.length(), 0)) < 0)
+            if ((msg_sent = send(client_socket, response, strlen(response), 0)) < 0)
             {
                 std::cerr << "Error : Sending failed\n";
                 exit(1);
@@ -92,12 +92,34 @@ class   Request : public Server
     public:
         std::string path;
         std::string method;
+        std::string status_line;
         std::map<std::string, std::string> request;
 
+        
         void    PrintRequest(char *req)
         {
             std::cout << req;
         }
+
+        void  ParseRequest(char *req)
+        {
+            int delimiter_position;
+            std::string current_line, key, value;
+            std::stringstream request_stream(req);
+
+            std::getline(request_stream, status_line); //status line
+            while ( getline(request_stream >> std::ws >> std::skipws, current_line, '\n') )
+            {
+                current_line.erase(std::remove(current_line.begin(), current_line.end(), '\r'), current_line.end());    //remove every occurence of '/r' in line
+                delimiter_position = current_line.find(':');
+                key = current_line.substr(0, delimiter_position);                           
+                value = current_line.substr(delimiter_position + 1, current_line.length());
+                request[key] = value;   //storing key and value in map
+                key.erase();    //erase key and value
+                value.erase();  //for next iteration
+            }
+        }
+      
 };
 
 class   Response : public Server
@@ -114,7 +136,8 @@ int main()
     Request Parsing;
 
     WebServer.Start();
-    Parsing.PrintRequest(WebServer.requested_data);
+    //Parsing.PrintRequest(WebServer.requested_data);
+    Parsing.ParseRequest(WebServer.requested_data);
 
     return (0);
 }
