@@ -12,15 +12,15 @@ class Handler
 		Handler();
 		~Handler();
 
-		void	parseRequest(char *req);
-		void	parseBody(char *body);
+		void	ParseRequest(char *req);
+		void	ParseBody(char *body);
 
 	private:
     	std::map<std::string, std::string> _request;
 
-		void	handlePost();
-		void	handleGet();
-		void	handleDelete();
+		void	HandlePost();
+		void	HandleGet();
+		void	HandleDelete();
 };
 
 #endif

@@ -4,7 +4,7 @@ Handler::Handler() {}
 
 Handler::~Handler() {}
 
-void Handler::parseRequest(char *req)
+void Handler::ParseRequest(char *req)
 {
 	int delimiter_position;
 	std::string current_line, key, value, request_line;
@@ -28,26 +28,26 @@ void Handler::parseRequest(char *req)
 	// 	std::cout << it->first << ": |" << it->second << "|\n";
 	// }
 	if (request_line.substr(0, 4) == "GET ")
-		this->handleGet();
+		this->HandleGet();
 	else if (request_line.substr(0, 5) == "POST ")
-		this->handlePost();
+		this->HandlePost();
 	else if (request_line.substr(0, 6) == "DELETE ")
-		this->handleDelete();
+		this->HandleDelete();
 	else
 	{
 		// TODO: method not found response
 	}
 }
 
-void Handler::parseBody(char *body)
+void Handler::ParseBody(char *body)
 {
 	(void)body;
 }
 
-void Handler::handlePost()
+void Handler::HandlePost()
 {
 }
 
-void Handler::handleGet() {}
+void Handler::HandleGet() {}
 
-void Handler::handleDelete() {}
+void Handler::HandleDelete() {}

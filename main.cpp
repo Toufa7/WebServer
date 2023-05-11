@@ -7,7 +7,7 @@ int main()
     Handler Parsing;
 
     WebServer.Start();
-    Parsing.parseRequest(WebServer.requested_data);
+    Parsing.ParseRequest(WebServer.requested_data);
 
     return (0);
 }

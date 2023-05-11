@@ -8,6 +8,16 @@ void    Server::Init()
     getaddrinfo(LOCALHOST, PORT, &server_infos, &sinfo_ptr);
 }
 
+// Reading the arriving request message from the
+void    Server::GetRequest()
+{
+    if ((msg_received = recv(client_socket, requested_data, sizeof(requested_data), 0 )) < 0)
+    {
+        std::cerr << "Error : Receiving failed\n";
+        exit(1);
+    }
+}
+
 void    Server::SendResponse()
 {
     char response_header[1024] = "HTTP/1.1 200 OK\r\n"
@@ -20,8 +30,7 @@ void    Server::SendResponse()
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
-    int fd = open("test/poms.jpeg", O_RDONLY);
-    if (fd == -1)
+    if ((fd = open("test/poms.jpeg", O_RDONLY)) == -1)
     {
         std::cerr << "Error : Opening failed\n";
         exit(1);
@@ -40,15 +49,6 @@ void    Server::SendResponse()
     }
 }
 
-void    Server::GetRequest()
-{
-    if ((msg_received = recv(client_socket, requested_data, sizeof(requested_data), 0 )) < 0)
-    {
-        std::cerr << "Error : Receiving failed\n";
-        exit(1);
-    }
-}
-
 void    Server::Start()
 {
     Init();
@@ -58,11 +58,7 @@ void    Server::Start()
         exit(1);
     }
     int optval = 1;
-    /*
-        * option to enable the reuse of local addresses /
-        * used to set or get socket-level options that are not specific to any particular protocol or layer. /
-        * socket-level options include
-    */
+    // Allowing it to reuse the port instead of waiting 
     setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
     if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
     {
@@ -75,12 +71,15 @@ void    Server::Start()
         exit(1);
     }
     clt_addr = sizeof(storage_sock);
-    if ((client_socket = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr)) == -1)
+    while (TRUE)
     {
-        std::cerr << "Error: Accepting failed\n";
-        exit(1);
+        if ((client_socket = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr)) == -1)
+        {
+            std::cerr << "Error: Accepting failed\n";
+            exit(1);
+        }
+        GetRequest();
+        SendResponse();
     }
-    SendResponse();
-    GetRequest();
     close(client_socket);
 }
