@@ -4,10 +4,12 @@ CFLAGS = c++ -std=c++98 -Wall -Wextra -Werror
 FILES = main.cpp \
 	srcs/Server.cpp \
 	srcs/Handler.cpp \
+	srcs/Shared.cpp \
 	#srcs/Client.cpp
 
 HEADERS = includes/Server.hpp \
 	includes/Client.hpp \
+	includes/Shared.hpp \
 	includes/Handler.hpp
 OBJS = $(FILES:.cpp=.o)
 

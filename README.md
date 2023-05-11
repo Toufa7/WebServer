@@ -17,3 +17,8 @@ OOP in our Webserver :
   	{
 	// Everything related to each client : ...(not sure yet)
   	}
+
+	class Shared
+  	{
+	// Shared resources such as mime-types map, status codes map or other data structures that are used by multiple parts of the server.
+  	}
