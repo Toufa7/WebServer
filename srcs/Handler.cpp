@@ -22,17 +22,26 @@ void Handler::ParseRequest(char *req)
 		value.erase();																// for next iteration
 	}
 	// // Print key and values
-	// std::cout << "------------------------------------------\n";
-	// for (std::map<std::string, std::string>::const_iterator it = this->_request.begin(); it != this->_request.end(); ++it)
-	// {
-	// 	std::cout << it->first << ": |" << it->second << "|\n";
-	// }
+	std::cout << "-----------------Response Message ---------------------\n";
+	for (std::map<std::string, std::string>::const_iterator it = this->_request.begin(); it != this->_request.end(); ++it)
+	{
+		std::cout << "Key =>	" << it->first << "	Value => " << it->second << "|\n";
+	}
 	if (request_line.substr(0, 4) == "GET ")
+	{
+		std::cout << "		GET REQUEST\n";
 		this->HandleGet();
+	}
 	else if (request_line.substr(0, 5) == "POST ")
+	{
+		std::cout << "		POST REQUEST\n";
 		this->HandlePost();
+	}
 	else if (request_line.substr(0, 6) == "DELETE ")
+	{
+		std::cout << "		DELETE REQUEST\n";
 		this->HandleDelete();
+	}
 	else
 	{
 		// TODO: method not found response

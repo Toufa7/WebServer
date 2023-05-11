@@ -30,13 +30,16 @@ void    Server::SendResponse()
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
-    if ((fd = open("test/poms.jpeg", O_RDONLY)) == -1)
+    int fd = open("test/poms.jpeg", O_RDONLY);
+    struct stat file_size;
+    if (fd == -1)
     {
         std::cerr << "Error : Opening failed\n";
         exit(1);
     }
-    char response_body[68438];
-    int nbyte = read(fd, response_body, 68438);
+    fstat(fd, &file_size);
+    char *response_body = new char[file_size.st_size];
+    int nbyte = read(fd, response_body, file_size.st_size);
     if (nbyte == -1)
     {
         std::cerr << "Error : Reading failed\n";
@@ -47,6 +50,7 @@ void    Server::SendResponse()
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
+    delete [] response_body;
 }
 
 void    Server::Start()
@@ -71,8 +75,8 @@ void    Server::Start()
         exit(1);
     }
     clt_addr = sizeof(storage_sock);
-    while (TRUE)
-    {
+    // while (TRUE)
+    // {
         if ((client_socket = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr)) == -1)
         {
             std::cerr << "Error: Accepting failed\n";
@@ -80,6 +84,6 @@ void    Server::Start()
         }
         GetRequest();
         SendResponse();
-    }
+    // }
     close(client_socket);
 }
