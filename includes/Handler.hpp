@@ -17,10 +17,15 @@ class Handler
 
 	private:
     	std::map<std::string, std::string> _request;
+		std::string _method;
+		std::string _path;
 
 		void	HandlePost();
 		void	HandleGet();
 		void	HandleDelete();
+		std::string GetHeaderMethod();
+		std::string GetHeaderPath();
+
 };
 
 #endif
