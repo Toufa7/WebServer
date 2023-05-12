@@ -12,7 +12,7 @@ class Handler
 		Handler();
 		~Handler();
 
-		void	ParseRequest(char *req);
+		void	ParseRequestHeader(char *req);
 		void	ParseBody(char *body);
 
 	private:

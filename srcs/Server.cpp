@@ -16,6 +16,7 @@ void    Server::GetRequest()
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
+    std::cout << requested_data;
 }
 
 void    Server::SendResponse()
@@ -31,15 +32,15 @@ void    Server::SendResponse()
         exit(1);
     }
     int fd = open("test/poms.jpeg", O_RDONLY);
-    struct stat file_size;
+    struct stat file_infos;
     if (fd == -1)
     {
         std::cerr << "Error : Opening failed\n";
         exit(1);
     }
-    fstat(fd, &file_size);
-    char *response_body = new char[file_size.st_size];
-    int nbyte = read(fd, response_body, file_size.st_size);
+    fstat(fd, &file_infos);
+    char *response_body = new char[file_infos.st_size];
+    int nbyte = read(fd, response_body, file_infos.st_size);
     if (nbyte == -1)
     {
         std::cerr << "Error : Reading failed\n";
