@@ -1,5 +1,13 @@
 #include "../includes/Handler.hpp"
 
+//  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
+
+Handler::Handler() {}
+
+Handler::~Handler() {}
+
+//  ------------- ACCESSOR --------------------
+
 //Request header method getter
 std::string Handler::GetHeaderMethod()
 {
@@ -12,10 +20,7 @@ std::string Handler::GetHeaderPath()
 	return(_path);
 }
 
-Handler::Handler() {}
-
-Handler::~Handler() {}
-
+// ------------- METHODS ------------- 
 void Handler::ParseRequestHeader(char *req)
 {
 	int delimiter_position;
@@ -24,8 +29,8 @@ void Handler::ParseRequestHeader(char *req)
 
 	std::getline(request_stream, request_line);					// Request-line
 	std::stringstream request_line_stream(request_line);
-	request_line_stream >> std::skipws >> std::ws >> _method;	// Streaming methode into _methode while take care of white spaces
-	request_line_stream >> std::skipws >> std::ws >> _path;		// same for path
+	request_line_stream >> std::skipws >> std::ws >> this->_method;	// Streaming methode into _methode while take care of white spaces
+	request_line_stream >> std::skipws >> std::ws >> this->_path;		// same for path
 
 	while (getline(request_stream >> std::ws >> std::skipws, current_line, '\n'))
 	{
@@ -39,22 +44,22 @@ void Handler::ParseRequestHeader(char *req)
 	}
 
 	// // Print key and values
-	std::cout << "-----------------Response Message ---------------------\n";
+	std::cout << "----------------- Request Header ---------------------\n";
 	for (std::map<std::string, std::string>::const_iterator it = this->_request.begin(); it != this->_request.end(); ++it)
 	{
-		std::cout << "Key =>	" << it->first << "	Value => " << it->second << "|\n";
+		std::cout << it->first << ": |" << it->second << "|\n";
 	}
-	if (_method == "GET")
+	if (this->_method == "GET")
 	{
 		// std::cout << "		GET REQUEST\n";
 		this->HandleGet();
 	}
-	else if (_method == "POST")
+	else if (this->_method == "POST")
 	{
 		// std::cout << "		POST REQUEST\n";
 		this->HandlePost();
 	}
-	else if (_method == "DELETE")
+	else if (this->_method == "DELETE")
 	{
 		// std::cout << "		DELETE REQUEST\n";
 		this->HandleDelete();
