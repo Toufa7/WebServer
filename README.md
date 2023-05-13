@@ -3,7 +3,7 @@ Making an HTTP WebServer in C from scratch!
 
 OOP in our Webserver :
 
-	class Server
+	class Server 
   	{
 	// Setuping and startig the server : Creating socket -> binding -> listening (Handling multiple clients)
 	}
