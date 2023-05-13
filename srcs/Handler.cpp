@@ -1,5 +1,43 @@
 #include "../includes/Handler.hpp"
 
+
+std::string Handler::GetMimeType()
+{
+	Shared mime_map;
+	int dot_position;
+	std::string extention;
+	std::map<std::string, std::string>::iterator it;
+
+	//case of path with a file extention
+	dot_position = _path.find_last_of(".");
+	if (dot_position >= 0)
+	{
+		extention = _path.substr(dot_position);
+		it = mime_map.mime_types.find(extention);
+		if (it != mime_map.mime_types.end())
+		{
+			std::cout << "type is :" << it->second << '\n';
+			return (it->second);
+		}
+	}
+	//other cases should be handled
+	return ("n/a");
+}
+
+
+
+//Request header method getter
+std::string Handler::GetHeaderMethod()
+{
+	return(_method);
+}
+
+//Request header path getter
+std::string Handler::GetHeaderPath()
+{
+	return(_path);
+}
+
 Handler::Handler() {}
 
 Handler::~Handler() {}
@@ -8,12 +46,13 @@ void Handler::ParseRequestHeader(char *req)
 {
 	int delimiter_position;
 	std::string current_line, key, value, request_line;
-
-
 	std::stringstream request_stream(req);
 
-	std::getline(request_stream, request_line); // Request-line
-	std::cout << "---->" << request_line << std::endl;
+	std::getline(request_stream, request_line);					// Request-line
+	std::stringstream request_line_stream(request_line);
+	request_line_stream >> std::skipws >> std::ws >> _method;	// Streaming methode into _methode while take care of white spaces
+	request_line_stream >> std::skipws >> std::ws >> _path;		// same for path
+
 	while (getline(request_stream >> std::ws >> std::skipws, current_line, '\n'))
 	{
 		current_line.erase(std::remove(current_line.begin(), current_line.end(), '\r'), current_line.end()); // remove every occurence of '/r' in line
@@ -24,23 +63,24 @@ void Handler::ParseRequestHeader(char *req)
 		key.erase();																// erase key and value
 		value.erase();																// for next iteration
 	}
+
 	// // Print key and values
-	std::cout << "-----------------Response Message ---------------------\n";
-	for (std::map<std::string, std::string>::const_iterator it = this->_request.begin(); it != this->_request.end(); ++it)
-	{
-		std::cout << "Key =>	" << it->first << "	Value => " << it->second << "|\n";
-	}
-	if (request_line.substr(0, 4) == "GET ")
+	// std::cout << "-----------------Response Message ---------------------\n";
+	// for (std::map<std::string, std::string>::const_iterator it = this->_request.begin(); it != this->_request.end(); ++it)
+	// {
+	// 	std::cout << "Key =>	" << it->first << "	Value => " << it->second << "|\n";
+	// }
+	if (_method == "GET")
 	{
 		// std::cout << "		GET REQUEST\n";
 		this->HandleGet();
 	}
-	else if (request_line.substr(0, 5) == "POST ")
+	else if (_method == "POST")
 	{
 		// std::cout << "		POST REQUEST\n";
 		this->HandlePost();
 	}
-	else if (request_line.substr(0, 6) == "DELETE ")
+	else if (_method == "DELETE")
 	{
 		// std::cout << "		DELETE REQUEST\n";
 		this->HandleDelete();
@@ -49,6 +89,7 @@ void Handler::ParseRequestHeader(char *req)
 	{
 		// TODO: method not found response
 	}
+	GetMimeType();
 }
 
 void Handler::ParseBody(char *body)
