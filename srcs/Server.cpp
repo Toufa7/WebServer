@@ -8,7 +8,7 @@ void    Server::Init()
     getaddrinfo(LOCALHOST, PORT, &server_infos, &sinfo_ptr);
 }
 
-// Reading the arriving request message from the
+// Reading the arriving request message from the client
 void    Server::GetRequest()
 {
     if ((msg_received = recv(client_socket, requested_data, sizeof(requested_data), 0 )) < 0)
@@ -16,22 +16,22 @@ void    Server::GetRequest()
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
-    std::cout << requested_data;
+    write(1, requested_data, msg_received);
 }
 
 void    Server::SendResponse()
 {
-    char response_header[1024] = "HTTP/1.1 200 OK\r\n"
+    std::string response_header = "HTTP/1.1 200 OK\r\n"
                                 "Server: Allah Y7ssen L3wan\r\n"
-                                "Content-Length: 68438\r\n"
-                                "Content-Type: image/png\r\n"
+                                "Content-Length: 332\r\n"
+                                "Content-Type: text/html\r\n"
                                 "Connection: close\r\n\r\n";
-    if (send(client_socket, response_header, strlen(response_header), 0) == -1)
+    if (send(client_socket, response_header.c_str(), response_header.length(), 0) == -1)
     {   
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
-    int fd = open("test/poms.jpeg", O_RDONLY);
+    int fd = open("test/homepage.txt", O_RDONLY);
     struct stat file_infos;
     if (fd == -1)
     {
@@ -76,15 +76,19 @@ void    Server::Start()
         exit(1);
     }
     clt_addr = sizeof(storage_sock);
-    // while (TRUE)
-    // {
+    while (TRUE)
+    {
         if ((client_socket = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr)) == -1)
         {
             std::cerr << "Error: Accepting failed\n";
             exit(1);
         }
+
         GetRequest();
+        {
+            // 
+        }
         SendResponse();
-    // }
+    }
     close(client_socket);
 }

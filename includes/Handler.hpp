@@ -5,6 +5,7 @@
 #include <map>
 #include <cstring>
 #include <sstream>
+#include "Shared.hpp"
 
 class Handler
 {
@@ -25,6 +26,8 @@ class Handler
 		void	HandleDelete();
 		std::string GetHeaderMethod();
 		std::string GetHeaderPath();
+		std::string GetMimeType();
+
 
 };
 
