@@ -1,5 +1,31 @@
 #include "../includes/Handler.hpp"
 
+
+std::string Handler::GetMimeType()
+{
+	Shared mime_map;
+	int dot_position;
+	std::string extention;
+	std::map<std::string, std::string>::iterator it;
+
+	//case of path with a file extention
+	dot_position = _path.find_last_of(".");
+	if (dot_position >= 0)
+	{
+		extention = _path.substr(dot_position);
+		it = mime_map.mime_types.find(extention);
+		if (it != mime_map.mime_types.end())
+		{
+			std::cout << "type is :" << it->second << '\n';
+			return (it->second);
+		}
+	}
+	//other cases should be handled
+	return ("n/a");
+}
+
+
+
 //Request header method getter
 std::string Handler::GetHeaderMethod()
 {
@@ -39,11 +65,11 @@ void Handler::ParseRequestHeader(char *req)
 	}
 
 	// // Print key and values
-	std::cout << "-----------------Response Message ---------------------\n";
-	for (std::map<std::string, std::string>::const_iterator it = this->_request.begin(); it != this->_request.end(); ++it)
-	{
-		std::cout << "Key =>	" << it->first << "	Value => " << it->second << "|\n";
-	}
+	// std::cout << "-----------------Response Message ---------------------\n";
+	// for (std::map<std::string, std::string>::const_iterator it = this->_request.begin(); it != this->_request.end(); ++it)
+	// {
+	// 	std::cout << "Key =>	" << it->first << "	Value => " << it->second << "|\n";
+	// }
 	if (_method == "GET")
 	{
 		// std::cout << "		GET REQUEST\n";
@@ -63,6 +89,7 @@ void Handler::ParseRequestHeader(char *req)
 	{
 		// TODO: method not found response
 	}
+	GetMimeType();
 }
 
 void Handler::ParseBody(char *body)
