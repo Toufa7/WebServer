@@ -24,7 +24,7 @@ void    Server::ResponseHeader()
 {
     int         status_code = 200;
     std::string status_text = " OK";
-    response_header.assign( "HTTP/1.1 " + std::to_string(status) + status_text + CRLF
+    response_header.assign( "HTTP/1.1 " + std::to_string(status_code) + status_text + CRLF
                             "Server: Allah Y7ssen L3wan\r\n"
                             "Content-Length: "  + std::to_string(content_length) + CRLF
                             "Content-Type: "    + GetMimeType() + CRLF
