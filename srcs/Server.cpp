@@ -11,37 +11,52 @@ void    Server::Init()
 // Reading the arriving request message from the client
 void    Server::GetRequest()
 {
+    // requested_data = new char[10240];
     if ((msg_received = recv(client_socket, requested_data, sizeof(requested_data), 0 )) < 0)
     {
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
+    // Printing the request
     write(1, requested_data, msg_received);
+}
+void    Server::ResponseHeader()
+{
+    int         status_code = 200;
+    std::string status_text = " OK";
+    response_header.assign( "HTTP/1.1 " + std::to_string(status) + status_text + CRLF
+                            "Server: Allah Y7ssen L3wan\r\n"
+                            "Content-Length: "  + std::to_string(content_length) + CRLF
+                            "Content-Type: "    + GetMimeType() + CRLF
+                            "Connection: close\r\n\r\n");
 }
 
 void    Server::SendResponse()
 {
-    std::string response_header = "HTTP/1.1 200 OK\r\n"
-                                "Server: Allah Y7ssen L3wan\r\n"
-                                "Content-Length: 332\r\n"
-                                "Content-Type: text/html\r\n"
-                                "Connection: close\r\n\r\n";
+    struct stat file_infos;
+    int         fd;
+    char        *response_body;
+    int         nbyte;
+
+    if ((fd = open("test/homepage.html", O_RDONLY)) == -1)
+    {
+        std::cerr << "Error : Opening failed\n";
+        exit(1);
+    }
+    if (fstat(fd, &file_infos) == -1)
+    {
+        std::cerr << "Error : Failed to obtain informations\n";
+        exit(1);
+    }
+    response_body = new char[file_infos.st_size];
+    content_length = file_infos.st_size;
+    ResponseHeader();
     if (send(client_socket, response_header.c_str(), response_header.length(), 0) == -1)
     {   
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
-    int fd = open("test/homepage.txt", O_RDONLY);
-    struct stat file_infos;
-    if (fd == -1)
-    {
-        std::cerr << "Error : Opening failed\n";
-        exit(1);
-    }
-    fstat(fd, &file_infos);
-    char *response_body = new char[file_infos.st_size];
-    int nbyte = read(fd, response_body, file_infos.st_size);
-    if (nbyte == -1)
+    if ((nbyte = read(fd, response_body, file_infos.st_size)) == -1)
     {
         std::cerr << "Error : Reading failed\n";
         exit(1);
@@ -63,7 +78,7 @@ void    Server::Start()
         exit(1);
     }
     int optval = 1;
-    // Allowing it to reuse the port instead of waiting 
+    // Allowing it to reuse the port instead of waiting
     setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
     if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
     {
@@ -75,6 +90,7 @@ void    Server::Start()
         std::cerr << "Error: Listening failed\n";
         exit(1);
     }
+
     clt_addr = sizeof(storage_sock);
     while (TRUE)
     {
@@ -83,11 +99,8 @@ void    Server::Start()
             std::cerr << "Error: Accepting failed\n";
             exit(1);
         }
-
         GetRequest();
-        {
-            // 
-        }
+        ParseRequestHeader(requested_data);
         SendResponse();
     }
     close(client_socket);

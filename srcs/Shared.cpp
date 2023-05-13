@@ -18,6 +18,8 @@ Exceptions::~Exceptions() throw()
 Shared::Shared()
 {
 	// MIME Types
+	// mp3, mp4, 
+
 	this->mime_types[".html"] = "text/html";
 	this->mime_types[".htm"] = "text/html";
 	this->mime_types[".shtml"] = "text/html";

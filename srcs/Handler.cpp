@@ -8,20 +8,17 @@ std::string Handler::GetMimeType()
 	std::string extention;
 	std::map<std::string, std::string>::iterator it;
 
-	//case of path with a file extention
+	// case of path with a file extention
 	dot_position = _path.find_last_of(".");
 	if (dot_position >= 0)
 	{
 		extention = _path.substr(dot_position);
 		it = mime_map.mime_types.find(extention);
 		if (it != mime_map.mime_types.end())
-		{
-			std::cout << "type is :" << it->second << '\n';
 			return (it->second);
-		}
 	}
-	//other cases should be handled
-	return ("n/a");
+	// other cases should be handled
+	return ("text/html");
 }
 
 
