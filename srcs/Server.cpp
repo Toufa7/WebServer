@@ -16,7 +16,7 @@ void    Server::GetRequest()
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
-    write(1,requested_data, msg_received);
+    write(1, requested_data, msg_received);
 }
 
 void    Server::SendResponse()
