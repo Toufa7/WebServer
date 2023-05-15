@@ -45,11 +45,12 @@ void Handler::ParseRequestHeader(char *req)
 {
 	int delimiter_position;
 	std::string current_line, key, value;
+	char *body;
 
 	std::string request = req;
 	size_t header_len = request.find("\r\n\r\n");		// Find the end of the request header
 	std::string header = request.substr(0, header_len); // Save the header
-	std::string body = request.substr(header_len + 4);	// Save the body
+	body = req + header_len + 4;						// Save the body
 	std::stringstream request_stream(header);
 
 	request_stream >> std::skipws >> std::ws >> this->_method; // Streaming methode into _methode while take care of white spaces
@@ -67,28 +68,58 @@ void Handler::ParseRequestHeader(char *req)
 
 	// TODO vlaidate the request header content
 	// Print Header key and values
-	std::cout << "----------------- Request Header ---------------------\n";
-	std::cout << "method: |" << this->_method << "|\n";
-	std::cout << "path: |" << this->_path << "|\n";
-	for (std::map<std::string, std::string>::const_iterator it = this->_req_header.begin(); it != this->_req_header.end(); ++it)
-	{
-		std::cout << it->first << ": |" << it->second << "|\n";
-	}
+	// std::cout << "----------------- Request Header ---------------------\n";
+	// std::cout << "method: |" << this->_method << "|\n";
+	// std::cout << "path: |" << this->_path << "|\n";
+	// for (std::map<std::string, std::string>::const_iterator it = this->_req_header.begin(); it != this->_req_header.end(); ++it)
+	// {
+	// 	std::cout << it->first << ": |" << it->second << "|\n";
+	// }
 	if (this->_method == "GET")
 		this->HandleGet();
 	else if (this->_method == "POST")
-		this->HandlePost();
+		this->HandlePost(body);
 	else if (this->_method == "DELETE")
 		this->HandleDelete();
 	else
 	{
 		// TODO: method not found response
 	}
-	GetMimeType();
 }
 
-void Handler::HandlePost()
+void Handler::HandlePost(char *body)
 {
+	if (this->_req_header.find("Content-Type") == this->_req_header.end())
+	{
+		// TODO: invalid request response
+		return;
+	}
+	if (this->_req_header["Content-Type"] == "application/octet-stream")
+	{
+		// Create a file stream for writing
+		std::ofstream file("/tmp/file", std::ios::out | std::ios::binary);
+		if (!file)
+		{
+			// Failed to create/open the file
+			// Handle the error accordingly
+		}
+		else
+		{
+			// Write the request body data to the file
+			file.write(body, std::stoi(this->_req_header["Content-Length"]));
+
+			// Close the file
+			file.close();
+
+			// File saved successfully
+		}
+	}
+	else if (this->_req_header["Content-Type"] == "application/octet-stream")
+	{
+	}
+	else if (this->_req_header["Content-Type"] == "application/octet-stream")
+	{
+	}
 }
 
 void Handler::HandleGet() {}

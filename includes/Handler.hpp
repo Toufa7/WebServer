@@ -5,6 +5,9 @@
 #include <map>
 #include <cstring>
 #include <sstream>
+#include <unistd.h>
+#include <fstream> 
+#include <ios> 
 #include "Shared.hpp"
 
 class Handler
@@ -14,7 +17,7 @@ class Handler
 		~Handler();
 
 		void		ParseRequestHeader(char *req);
-		std::string GetRequestMethod();
+ 		std::string GetRequestMethod();
 		std::string GetRequestPath();
 		std::string GetMimeType();
 		std::string GetStatusCode();
@@ -26,7 +29,7 @@ class Handler
 		std::string _status_code;
 		std::string _status_text;
 
-		void	HandlePost();
+		void	HandlePost(char *body);
 		void	HandleGet();
 		void	HandleDelete();
 

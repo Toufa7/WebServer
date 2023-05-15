@@ -2,81 +2,70 @@
 
 Exceptions::Exceptions(std::string error_message) : _error_message(error_message)
 {
-	//Exceptions class constructor
+	// Exceptions class constructor
 }
 
 const char *Exceptions::what() const throw()
 {
-	return(_error_message.c_str());
+	return (_error_message.c_str());
 }
 
 Exceptions::~Exceptions() throw()
 {
-	//Exceptions class destructor
+	// Exceptions class destructor
 }
 
 Shared::Shared()
 {
 	// MIME Types
-	// mp3, mp4, 
 
 	this->mime_types[".html"] = "text/html";
 	this->mime_types[".htm"] = "text/html";
-	this->mime_types[".shtml"] = "text/html";
 	this->mime_types[".css"] = "text/css";
-	this->mime_types[".xml"] = "application/xml";
-	this->mime_types[".gif"] = "image/gif";
-	this->mime_types[".jpeg"] = "image/jpeg";
-	this->mime_types[".jpg"] = "image/jpeg";
 	this->mime_types[".js"] = "application/javascript";
-	this->mime_types[".atom"] = "application/atom+xml";
-	this->mime_types[".rss"] = "application/rss+xml";
-	this->mime_types[".mml"] = "text/mathml";
+	this->mime_types[".json"] = "application/json";
+	this->mime_types[".xml"] = "application/xml";
 	this->mime_types[".txt"] = "text/plain";
-	this->mime_types[".jad"] = "text/vnd.sun.j2me.app-descriptor";
-	this->mime_types[".wml"] = "text/vnd.wap.wml";
-	this->mime_types[".htc"] = "text/x-component";
+	this->mime_types[".jpg"] = "image/jpeg";
+	this->mime_types[".jpeg"] = "image/jpeg";
 	this->mime_types[".png"] = "image/png";
+	this->mime_types[".gif"] = "image/gif";
+	this->mime_types[".bmp"] = "image/bmp";
+	this->mime_types[".ico"] = "image/x-icon";
+	this->mime_types[".pdf"] = "application/pdf";
+	this->mime_types[".zip"] = "application/zip";
+	this->mime_types[".tar"] = "application/x-tar";
+	this->mime_types[".gz"] = "application/gzip";
+	this->mime_types[".rar"] = "application/x-rar-compressed";
+	this->mime_types[".7z"] = "application/x-7z-compressed";
+	this->mime_types[".mp3"] = "audio/mpeg";
+	this->mime_types[".wav"] = "audio/wav";
+	this->mime_types[".mp4"] = "video/mp4";
+	this->mime_types[".avi"] = "video/x-msvideo";
+	this->mime_types[".ppt"] = "application/vnd.ms-powerpoint";
+	this->mime_types[".pptx"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+	this->mime_types[".doc"] = "application/msword";
+	this->mime_types[".docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+	this->mime_types[".xls"] = "application/vnd.ms-excel";
+	this->mime_types[".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+	this->mime_types[".csv"] = "text/csv";
+	this->mime_types[".swf"] = "application/x-shockwave-flash";
+	this->mime_types[".svg"] = "image/svg+xml";
+	this->mime_types[".mpg"] = "video/mpeg";
+	this->mime_types[".mpeg"] = "video/mpeg";
+	this->mime_types[".webm"] = "video/webm";
+	this->mime_types[".ogg"] = "audio/ogg";
+	this->mime_types[".ogg"] = "video/ogg";
+	this->mime_types[".webp"] = "image/webp";
 	this->mime_types[".tif"] = "image/tiff";
 	this->mime_types[".tiff"] = "image/tiff";
-	this->mime_types[".wbmp"] = "image/vnd.wap.wbmp";
-	this->mime_types[".ico"] = "image/x-icon";
-	this->mime_types[".jng"] = "image/x-jng";
-	this->mime_types[".bmp"] = "image/x-ms-bmp";
-	this->mime_types[".svg"] = "image/svg+xml";
-	this->mime_types[".svgz"] = "image/svg+xml";
-	this->mime_types[".webp"] = "image/webp";
 	this->mime_types[".woff"] = "application/font-woff";
-	this->mime_types[".jar"] = "application/java-archive";
-	this->mime_types[".war"] = "application/java-archive";
-	this->mime_types[".ear"] = "application/java-archive";
-	this->mime_types[".json"] = "application/json";
-	this->mime_types[".hqx"] = "application/mac-binhex40";
-	this->mime_types[".doc"] = "application/msword";
-	this->mime_types[".pdf"] = "application/pdf";
-	this->mime_types[".ps"] = "application/postscript";
-	this->mime_types[".eps"] = "application/postscript";
-	this->mime_types[".ai"] = "application/postscript";
-	this->mime_types[".rtf"] = "application/rtf";
-	this->mime_types[".m3u8"] = "application/vnd.apple.mpegurl";
-	this->mime_types[".kml"] = "application/vnd.google-earth.kml+xml";
-	this->mime_types[".kmz"] = "application/vnd.google-earth.kmz";
-	this->mime_types[".xls"] = "application/vnd.ms-excel";
+	this->mime_types[".woff2"] = "application/font-woff2";
+	this->mime_types[".ttf"] = "application/x-font-ttf";
+	this->mime_types[".otf"] = "application/x-font-opentype";
 	this->mime_types[".eot"] = "application/vnd.ms-fontobject";
-	this->mime_types[".ppt"] = "application/vnd.ms-powerpoint";
-	this->mime_types[".odg"] = "application/vnd.oasis.opendocument.graphics";
-	this->mime_types[".odp"] = "application/vnd.oasis.opendocument.presentation";
-	this->mime_types[".ods"] = "application/vnd.oasis.opendocument.spreadsheet";
-	this->mime_types[".odt"] = "application/vnd.oasis.opendocument.text";
-	this->mime_types[".pptx"] = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
-	this->mime_types[".xlsx"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
-	this->mime_types[".docx"] = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
-	this->mime_types[".wmlc"] = "application/vnd.wap.wmlc";
-	this->mime_types[".7z"] = "application/x-7z-compressed";
-	this->mime_types[".cco"] = "application/x-cocoa";
-	this->mime_types[".jardiff"] = "application/x-java-archive-diff";
-	this->mime_types[".jnlp"] = "application/x-java-jnlp-file";
-	
+	this->mime_types[".bin"] = "application/octet-stream";
+
 	// Status codes
 	this->status_codes["100"] = "Continue";
 	this->status_codes["101"] = "Switching Protocols";
