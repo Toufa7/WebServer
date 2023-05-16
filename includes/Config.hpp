@@ -6,57 +6,70 @@
 #include <string>
 #include "Shared.hpp"
 
+struct cgi
+{
+    std::string type;
+    std::string path;
+};
+
 class ServerLocation
 {
+    protected:
+
+        std::string                 _LocationPath;
+        int                         _AutoIndex;
+        cgi                         _CgiInfo;
+        std::string                 _Root;
+        std::string                 _Upload;
+        std::vector<std::string>    _AllowedMethodsVec;
     public:
-        struct allowed_methods
-        {
-            bool post;
-            bool get;
-            bool del;
-        };
-
-        struct cgi
-        {
-            std::string type;
-            std::string path;
-        };
-
-        std::string     location_path;
-        int             auto_index;
-        cgi             cgi_info;
-        std::string     root;
-        std::string     upload;
-        allowed_methods alwd_mtd;
         ServerLocation();
-        ~ServerLocation();  
+        ~ServerLocation();
+        int                         GetAutoIndex(void);
+        cgi&                        GetCgiInfo(void);
+        std::string                 GetLocationPath(void);
+        std::string                 GetRoot(void);
+        std::string                 GetUpload(void);
+        std::vector<std::string>    GetAllowedMethodsVec(void);
 };
 
-class ServerConfig
+class ServerConfig : public ServerLocation
 {
+    protected:
+        unsigned int                _Port;
+        std::string                 _Host;
+        std::string                 _ServerName;
+        std::string                 _ClientBodySize;
+        std::string                 _ErrorPage;
+        std::vector<ServerLocation> _LocationsVec;
     public:
-        unsigned int                _port;
-        std::string                 _host;
-        std::string                 _server_name;
-        std::string                 _client_body_size;
-        std::string                 _error_page;
-        std::vector<ServerLocation> _locations;
         ServerConfig();
         ~ServerConfig();
-        void    parse_server_location(std::string location);
-        void    print_server_location(unsigned int index);
+        void                            ParseServerLocation(std::string location);
+        void                            PrintServerLocation(unsigned int index);
+        unsigned int                    GetPort(void);
+        std::string                     GetHost(void);
+        std::string                     GetServerName(void);
+        std::string                     GetClientBodySize(void);
+        std::string                     GetErrorPage(void);
+        std::vector<ServerLocation>&    GetLocationsVec(void);
+
 };
 
-class GlobalConfig
+class GlobalConfig : public ServerConfig
 {
+    protected:
+        unsigned int _ServerCount;
+        std::vector<ServerConfig> _ServersConfigVec;
     public:
-        unsigned int server_count;
-        std::vector<ServerConfig> servers;
-        void    parse_config_file(char *av);
-        void    parse_server_config(std::string server);
-        void    print_server_config(unsigned int index);
-        void    print_servers(void);
         GlobalConfig();
+        void    ParseConfigFile(char *av);
+        void    ParseServerConfig(std::string server);
+        void    PrintServerConfig(unsigned int index);
+        void    PrintServers(void);
+        unsigned int GetServerCount(void);
+        std::vector<ServerConfig>& GetServersVector(void);
+
 };
 
 void    InvalidConfigFile(std::string err_message);

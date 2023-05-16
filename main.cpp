@@ -9,12 +9,13 @@ int main(int ac, char **av)
 
     if (ac == 2)
     {
-        configuration.parse_config_file(av[1]);
-        Server          WebServer(configuration.servers[0]);
-        configuration.print_servers();
+        configuration.ParseConfigFile(av[1]);
+        configuration.PrintServers();
+        Server          WebServer(configuration.GetServersVector()[0]);
         WebServer.Start();
     }
     else
         InvalidConfigFile("Missing config file.");
+
     return (0);
 }
