@@ -6,11 +6,11 @@ FILES = main.cpp \
 	srcs/Handler.cpp \
 	srcs/Shared.cpp \
 	srcs/Config.cpp \
-	#srcs/Client.cpp
 
 HEADERS = includes/Server.hpp \
 	includes/Client.hpp \
 	includes/Shared.hpp \
+	includes/Config.hpp \
 	includes/Handler.hpp
 OBJS = $(FILES:.cpp=.o)
 

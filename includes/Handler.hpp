@@ -7,7 +7,8 @@
 #include <sstream>
 #include <unistd.h>
 #include <fstream> 
-#include <ios> 
+#include <ios>
+#include <regex>
 #include "Shared.hpp"
 
 class Handler
@@ -17,21 +18,25 @@ class Handler
 		~Handler();
 
 		void		ParseRequestHeader(char *req);
+
  		std::string GetRequestMethod();
-		std::string GetRequestPath();
+		std::string GetRequestURI();
 		std::string GetMimeType();
 		std::string GetStatusCode();
 
 	private:
     	std::map<std::string, std::string> _req_header;
 		std::string _method;
-		std::string _path;
+		std::string _uri; // The Request-URI (Uniform Resource Identifier) 
 		std::string _status_code;
 		std::string _status_text;
 
 		void	HandlePost(char *body);
 		void	HandleGet();
 		void	HandleDelete();
+		bool	validateRequest();
+		bool 	matchLocation();
+		bool 	validateURI(const std::string& uri);
 
 
 };

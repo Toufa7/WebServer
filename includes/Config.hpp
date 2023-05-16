@@ -29,7 +29,7 @@ class ServerLocation
         std::string     upload;
         allowed_methods alwd_mtd;
         ServerLocation();
-        ~ServerLocation();
+        ~ServerLocation();  
 };
 
 class ServerConfig
@@ -51,7 +51,7 @@ class GlobalConfig
     public:
         std::vector<ServerConfig> servers;
         static unsigned int server_index;
-    void    parse_config_file(char *av);
+    void    parse_config_file(char *av); 
     void    parse_server_config(std::string server);
     void    parse_server_location(std::string location);
 };
