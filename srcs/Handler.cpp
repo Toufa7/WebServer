@@ -53,7 +53,7 @@ void Handler::ParseRequestHeader(char *req)
 	body = req + header_len + 4;						// Save the body
 	std::stringstream request_stream(header);
 
-	request_stream >> std::skipws >> std::ws >> this->_method; // Streaming methode into _methode while take care of white spaces
+	request_stream >> std::skipws >> std::ws >> this->_method; // Streaming method into _methode while take care of white spaces
 	request_stream >> std::skipws >> std::ws >> this->_path;   // same for path
 	std::getline(request_stream, current_line);				   // skip the remaining part of the request line (HTTP/1.1)
 
