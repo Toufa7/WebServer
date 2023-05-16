@@ -55,7 +55,10 @@ class GlobalConfig
         void    parse_config_file(char *av);
         void    parse_server_config(std::string server);
         void    print_server_config(unsigned int index);
+        void    print_servers(void);
         GlobalConfig();
 };
+
+void    InvalidConfigFile(std::string err_message);
 
 #endif

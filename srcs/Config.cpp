@@ -1,5 +1,11 @@
 #include "../includes/Config.hpp"
 
+void    InvalidConfigFile(std::string err_message)
+{
+    std::cout << err_message << std::endl;
+    exit(1);
+}
+
 ServerLocation::ServerLocation()
 {
     //all ints shall be intialised by 0
@@ -9,7 +15,7 @@ ServerLocation::ServerLocation()
     alwd_mtd.post = FALSE;
 
     cgi_info.type = "n/a";
-    cgi_info.type = "n/a";
+    cgi_info.path = "n/a";
 
     location_path = "n/a";
     auto_index = FALSE;
@@ -53,19 +59,14 @@ void GlobalConfig::parse_config_file(char *av)
     if (dot_position > 0)
     {
         if (file_name.substr(dot_position ,file_name.length()) != ".conf")
-        {
-            std::cout << "Invalid config file: wrong extention." << "\n";
-            return;
-        }
+            InvalidConfigFile("Invalid config file: wrong extention.");
+
     }
     else
-    {
-        std::cout << "Invalid config file: wrong extension." << "\n";
-        return;
-    }
+        InvalidConfigFile("Invalid config file: wrong extension.");
     config_file.open(file_name);
     if (!config_file)
-        std::cout << "There was an error when opening config file.";
+        InvalidConfigFile("There was an error when opening config file.");
     while (config_file)
     {
         std::getline(config_file, buffer);
@@ -77,31 +78,36 @@ void GlobalConfig::parse_config_file(char *av)
 
     /*----------------------------------- Extracting each "server" ----------------------------------*/
     oc = read_data.find("server ");
-    while (oc >= 0)
+    if (oc >= 0)
     {
-        soc = read_data.find("server ", oc + 1);
-        if (soc > oc)//since oc is already bigger than 0,so for soc to be after oc, it should be be bigger 
+        while (oc >= 0)
         {
-            server = read_data.substr(oc, soc - oc);
-            oc = read_data.find("server ", soc + 1);
-            parse_server_config(server);
-        }
-        if (soc < oc && soc > 0)
-        {
-            server = read_data.substr(soc, oc - soc);
             soc = read_data.find("server ", oc + 1);
-            parse_server_config(server);
-        }
-        if (soc < 0 || oc < 0) // if soc < 0 that means there's only one server
-        {
-            if (soc > 0)
-                server = read_data.substr(soc, read_data.length());
-            else if (oc > 0)
-                server = read_data.substr(oc, read_data.length());
-            parse_server_config(server);//call to this f() to parse each server individually
-            break;
+            if (soc > oc)//since oc is already bigger than 0,so for soc to be after oc, it should be be bigger
+            {
+                server = read_data.substr(oc, soc - oc);
+                oc = read_data.find("server ", soc + 1);
+                parse_server_config(server);
+            }
+            if (soc < oc && soc > 0)
+            {
+                server = read_data.substr(soc, oc - soc);
+                soc = read_data.find("server ", oc + 1);
+                parse_server_config(server);
+            }
+            if (soc < 0 || oc < 0) // if soc < 0 that means there's only one server
+            {
+                if (soc > 0)
+                    server = read_data.substr(soc, read_data.length());
+                else if (oc > 0)
+                    server = read_data.substr(oc, read_data.length());
+                parse_server_config(server);//call to this f() to parse each server individually
+                break;
+            }
         }
     }
+    else
+        InvalidConfigFile("Invalid config file : server directive not found");
     /*--------------------------------- End of extracting "server" ----------------------------------*/
 }
 
@@ -122,7 +128,7 @@ void    GlobalConfig::parse_server_config(std::string server)
         tmp._port = std::atoi(server.substr(colon_pos + 1, (((value_pos - colon_pos) - 1))).c_str());
     }
     else
-        std::cout << "Invalid config file : listen directive is not found." << "\n";
+        InvalidConfigFile("Invalid config file : listen directive is not found.");
     /*------------------------------- End of host port --------------------------------*/
 
     /*---------------------------- server_name -----------------------------------*/
@@ -142,7 +148,7 @@ void    GlobalConfig::parse_server_config(std::string server)
         tmp._client_body_size = server.substr((key_pos + 17), scolon_pos - (key_pos + 17));
     }
     else
-        std::cout << "Invalid config file : client body size is not found or not valid." << "\n";
+        InvalidConfigFile("Invalid config file : client body size is not found or not valid.");
     /*---------------------------- End of client body size -----------------------------------*/
 
     /*-------------------------------------- error page ---------------------------------------*/
@@ -166,7 +172,6 @@ void    GlobalConfig::parse_server_config(std::string server)
                 value_pos = server.find("}", key_pos);
                 location = server.substr(key_pos, (value_pos - key_pos) + 1);
                 tmp.parse_server_location(location);
-                break;
             }
             else
                 break;
@@ -174,7 +179,7 @@ void    GlobalConfig::parse_server_config(std::string server)
         }
     }
     else
-        std::cout << "Invalid config file : location directive not found." << "\n";
+        InvalidConfigFile("Invalid config file : location directive not found.");
     /*----------------------------------- End find locations -----------------------------------*/
 
     servers.push_back(tmp);
@@ -182,7 +187,6 @@ void    GlobalConfig::parse_server_config(std::string server)
 
 void    ServerConfig::parse_server_location(std::string location)
 {
-    std::cout << "am called\n";
     int key_pos, value_pos;
     ServerLocation location_tmp;
     std::string tmp_str;
@@ -209,7 +213,7 @@ void    ServerConfig::parse_server_location(std::string location)
         tmp_str.erase();
     }
     else
-        std::cout << "Invalid config file : allowed methods not found." << "\n";    
+        InvalidConfigFile("Invalid config file : allowed methods not found.");
     /*------------------------------------- End of allowed methods -------------------------------------*/
 
     /*----------------------------------------- auto index ----------------------------------------*/
@@ -222,7 +226,7 @@ void    ServerConfig::parse_server_location(std::string location)
             location_tmp.auto_index = 1;
     }
     else
-        std::cout << "Invalid config file : auto index not found." << "\n"; 
+        InvalidConfigFile("Invalid config file : auto index not found.");
     /*------------------------------------- End of auto index -------------------------------------*/
 
     /*------------------------------------- find root -------------------------------------*/
@@ -233,7 +237,7 @@ void    ServerConfig::parse_server_location(std::string location)
         location_tmp.root = location.substr((key_pos + 5), value_pos - (key_pos + 5));
     }
     else
-        std::cout << "Invalid config file : root not found." << "\n";
+        InvalidConfigFile("Invalid config file : root directive is not found.");
 
     /*----------------------------------- end find root -----------------------------------*/
     
@@ -253,16 +257,18 @@ void    ServerConfig::parse_server_location(std::string location)
 
 void    GlobalConfig::print_server_config(unsigned int index)
 {
-    if (index <= (server_count - 1))
-    {
+    if (index <= (server_count - 1)) {
         std::cout << "server index              : " << index << "\n";
         std::cout << "host                      : " << servers[index]._host << "\n";
+        std::cout << "server post               : " << servers[index]._port << "\n";
         if (servers[index]._server_name != "n/a")
             std::cout << "server name               : " << servers[index]._server_name << "\n";
         std::cout << "server client body size   : " << servers[index]._client_body_size << "\n";
-        std::cout << "server location(s)        : " << "\n";
-        for (unsigned long i = 0; i < servers[index]._locations.size(); i++)
+        std::cout << "\nserver location(s)\n\n";
+        for (unsigned long i = 0; i < servers[index]._locations.size(); i++) {
             servers[index].print_server_location(i);
+            std::cout << "\n";
+        }
     }
 }
 
@@ -270,19 +276,22 @@ void ServerConfig::print_server_location(unsigned int index)
 {
     if (index <= _locations.size())
     {
-        std::cout << "location index    : " << index << "\n";
-        std::cout << "location path : " << _locations[index].location_path << "\n";
-        std::cout << "location root : " << _locations[index].root << "\n";
-        std::cout << "location auto index   : " ;
+        std::cout << "location index            : " << index << "\n";
+        std::cout << "location path             : " << _locations[index].location_path << "\n";
+        std::cout << "location root             : " << _locations[index].root << "\n";
+        std::cout << "location auto index       : " ;
         if (_locations[index].auto_index == 0)
             std::cout << "OFF";
         else
             std::cout << "OFF";
         std::cout << "\n";
-        std::cout << "location cgi type : " << _locations[index].cgi_info.type << "\n";
-        std::cout << "location cgi path : " << _locations[index].cgi_info.path << "\n";
+        if (_locations[index].cgi_info.type != "n/a")
+        {
+            std::cout << "location cgi type         : " << _locations[index].cgi_info.type << "\n";
+            std::cout << "location cgi path         : " << _locations[index].cgi_info.path << "\n";
+        }
         if (_locations[index].upload != "n/a")
-            std::cout << "server upload : " << _locations[index].upload << "\n";
+            std::cout << "server upload         : " << _locations[index].upload << "\n";
         std::cout << "location allowed methods  : " ;
         if (_locations[index].alwd_mtd.post == 1)
             std::cout << "POST";
@@ -294,3 +303,8 @@ void ServerConfig::print_server_location(unsigned int index)
     }
 }
 
+void    GlobalConfig::print_servers(void)
+{
+    for (unsigned int i = 0; i < servers.size(); i++)
+        print_server_config(i);
+}
