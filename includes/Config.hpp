@@ -1,19 +1,19 @@
 #ifndef CONFIG_H
 #define CONFIG_H
 
+#include <iostream>
+#include <vector>
+#include <string>
 #include "Shared.hpp"
-#include "Handler.hpp"
-#include "Server.hpp"
-#include "Client.hpp"
 
 class ServerLocation
 {
     public:
         struct allowed_methods
         {
-            int post;
-            int get;
-            int del;
+            bool post;
+            bool get;
+            bool del;
         };
 
         struct cgi
@@ -41,19 +41,21 @@ class ServerConfig
         std::string                 _client_body_size;
         std::string                 _error_page;
         std::vector<ServerLocation> _locations;
-
-    ServerConfig();
-    ~ServerConfig();
+        ServerConfig();
+        ~ServerConfig();
+        void    parse_server_location(std::string location);
+        void    print_server_location(unsigned int index);
 };
 
 class GlobalConfig
 {
     public:
+        unsigned int server_count;
         std::vector<ServerConfig> servers;
-        static unsigned int server_index;
-    void    parse_config_file(char *av); 
-    void    parse_server_config(std::string server);
-    void    parse_server_location(std::string location);
+        void    parse_config_file(char *av);
+        void    parse_server_config(std::string server);
+        void    print_server_config(unsigned int index);
+        GlobalConfig();
 };
 
 #endif

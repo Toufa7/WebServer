@@ -16,7 +16,6 @@ class Shared
 {
 	public:
 		Shared();
-		//~Shared();
 
     	std::map<std::string, std::string> mime_types;
     	std::map<std::string, std::string> status_codes;

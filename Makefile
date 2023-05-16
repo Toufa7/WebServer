@@ -12,6 +12,7 @@ HEADERS = includes/Server.hpp \
 	includes/Shared.hpp \
 	includes/Config.hpp \
 	includes/Handler.hpp
+	
 OBJS = $(FILES:.cpp=.o)
 
 all : $(NAME)

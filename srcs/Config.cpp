@@ -36,6 +36,11 @@ ServerConfig::~ServerConfig()
     //config destructor
 }
 
+GlobalConfig::GlobalConfig()
+{
+    server_count = 0;
+}
+
 void GlobalConfig::parse_config_file(char *av)
 {
     //int           error_code;
@@ -55,7 +60,7 @@ void GlobalConfig::parse_config_file(char *av)
     }
     else
     {
-        std::cout << "Invalid config file: wrong extention." << "\n";
+        std::cout << "Invalid config file: wrong extension." << "\n";
         return;
     }
     config_file.open(file_name);
@@ -87,16 +92,15 @@ void GlobalConfig::parse_config_file(char *av)
             soc = read_data.find("server ", oc + 1);
             parse_server_config(server);
         }
-        if (soc < 0 || oc < 0) // if soc < 0 that means theres only one server
+        if (soc < 0 || oc < 0) // if soc < 0 that means there's only one server
         {
             if (soc > 0)
                 server = read_data.substr(soc, read_data.length());
             else if (oc > 0)
                 server = read_data.substr(oc, read_data.length());
-            parse_server_config(server);
+            parse_server_config(server);//call to this f() to parse each server individually
             break;
         }
-        //std::cout << "oc is second find " << oc << "soc is " << soc << std::endl;
     }
     /*--------------------------------- End of extracting "server" ----------------------------------*/
 }
@@ -107,6 +111,7 @@ void    GlobalConfig::parse_server_config(std::string server)
     std::string location;
     ServerConfig tmp;
 
+    server_count++;
     /*------------------------------- host and port -----------------------------------*/
     key_pos = server.find("listen ");
     if (key_pos >= 0)
@@ -160,7 +165,7 @@ void    GlobalConfig::parse_server_config(std::string server)
             {
                 value_pos = server.find("}", key_pos);
                 location = server.substr(key_pos, (value_pos - key_pos) + 1);
-                parse_server_location(location);
+                tmp.parse_server_location(location);
                 break;
             }
             else
@@ -173,11 +178,11 @@ void    GlobalConfig::parse_server_config(std::string server)
     /*----------------------------------- End find locations -----------------------------------*/
 
     servers.push_back(tmp);
-    exit(0);
 }
 
-void    GlobalConfig::parse_server_location(std::string location)
+void    ServerConfig::parse_server_location(std::string location)
 {
+    std::cout << "am called\n";
     int key_pos, value_pos;
     ServerLocation location_tmp;
     std::string tmp_str;
@@ -228,9 +233,64 @@ void    GlobalConfig::parse_server_location(std::string location)
         location_tmp.root = location.substr((key_pos + 5), value_pos - (key_pos + 5));
     }
     else
-        std::cout << "Invalid config file : root not found." << "\n"; 
+        std::cout << "Invalid config file : root not found." << "\n";
 
     /*----------------------------------- end find root -----------------------------------*/
-    //ba9i 5asni n9ad cgi
-    servers[server_index]._locations.push_back(location_tmp); 
+    
+   /*------------------------------------- find cgi -----------------------------------------*/
+    key_pos = location.find("cgi ");
+
+    if (key_pos >= 0)
+    {
+        value_pos = location.find(";", key_pos + 1);
+        tmp_str = location.substr((key_pos + 4), value_pos - (key_pos + 4));
+        location_tmp.cgi_info.type = tmp_str.substr(0, tmp_str.find(" ", 1));
+        location_tmp.cgi_info.path = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
+    }
+    /*----------------------------------- end of find cgi -----------------------------------*/
+    this->_locations.push_back(location_tmp);
 }
+
+void    GlobalConfig::print_server_config(unsigned int index)
+{
+    if (index <= (server_count - 1))
+    {
+        std::cout << "server index              : " << index << "\n";
+        std::cout << "host                      : " << servers[index]._host << "\n";
+        if (servers[index]._server_name != "n/a")
+            std::cout << "server name               : " << servers[index]._server_name << "\n";
+        std::cout << "server client body size   : " << servers[index]._client_body_size << "\n";
+        std::cout << "server location(s)        : " << "\n";
+        for (unsigned long i = 0; i < servers[index]._locations.size(); i++)
+            servers[index].print_server_location(i);
+    }
+}
+
+void ServerConfig::print_server_location(unsigned int index)
+{
+    if (index <= _locations.size())
+    {
+        std::cout << "location index    : " << index << "\n";
+        std::cout << "location path : " << _locations[index].location_path << "\n";
+        std::cout << "location root : " << _locations[index].root << "\n";
+        std::cout << "location auto index   : " ;
+        if (_locations[index].auto_index == 0)
+            std::cout << "OFF";
+        else
+            std::cout << "OFF";
+        std::cout << "\n";
+        std::cout << "location cgi type : " << _locations[index].cgi_info.type << "\n";
+        std::cout << "location cgi path : " << _locations[index].cgi_info.path << "\n";
+        if (_locations[index].upload != "n/a")
+            std::cout << "server upload : " << _locations[index].upload << "\n";
+        std::cout << "location allowed methods  : " ;
+        if (_locations[index].alwd_mtd.post == 1)
+            std::cout << "POST";
+        if (_locations[index].alwd_mtd.get == 1)
+            std::cout << " GET ";
+        if (_locations[index].alwd_mtd.del == 1)
+            std::cout << "DELETE";
+        std::cout << "\n";
+    }
+}
+

@@ -1,5 +1,10 @@
 #include "../includes/Server.hpp"
 
+Server::Server(ServerConfig &config)
+{
+    this->_config = config;
+}
+
 void    Server::Init()
 {
     memset(&server_infos, 0, sizeof(server_infos));
@@ -28,7 +33,7 @@ void    Server::ResponseHeader()
     response_header.assign( "HTTP/1.1 " + std::to_string(status_code) + status_text + CRLF
                             "Server: Allah Y7ssen L3wan\r\n"
                             "Content-Length: "  + std::to_string(content_length) + CRLF
-                            "Content-Type: "    + GetMimeType() + CRLF
+                            "Content-Type: "    + this->_handler.GetMimeType() + CRLF
                             "Connection: close\r\n\r\n");
 }
 
@@ -101,7 +106,7 @@ void    Server::Start()
             exit(1);
         }
         GetRequest();
-        ParseRequestHeader(requested_data);
+        this->_handler.ParseRequestHeader(requested_data, this->_config);
         SendResponse();
     }
     close(client_socket);

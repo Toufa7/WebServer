@@ -10,6 +10,7 @@
 #include <ios>
 #include <regex>
 #include "Shared.hpp"
+#include "Config.hpp"
 
 class Handler
 {
@@ -17,7 +18,7 @@ class Handler
 		Handler();
 		~Handler();
 
-		void		ParseRequestHeader(char *req);
+		void		ParseRequestHeader(char *req, ServerConfig &config);
 
  		std::string GetRequestMethod();
 		std::string GetRequestURI();

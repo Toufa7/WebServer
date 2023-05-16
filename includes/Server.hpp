@@ -15,7 +15,8 @@
 #include <map>
 #include <cstring>
 #include <sstream>
-#include "../includes/Handler.hpp"
+#include "Handler.hpp"
+#include "Config.hpp"
 
 #define PORT        "8080"
 #define BACKLOG     10              // Max allowed connections can be queued up
@@ -24,9 +25,10 @@
 #define CRLF        "\r\n"          // The determination of the line 
 
 // Setuping and startig the server : Creating socket -> binding -> listening (Handling multiple clients)
-class Server : public Handler
+class Server
 {
     public:
+        Server(ServerConfig &config);
         // Member Variables
         int                     server_socket; // The server listen on this socket
         int                     client_socket; // The server serve the client on this socket
@@ -46,6 +48,10 @@ class Server : public Handler
         void GetRequest();
         void Start();
         void ResponseHeader();
+    
+    private:
+        ServerConfig _config;
+        Handler _handler;
 };
 
 #endif

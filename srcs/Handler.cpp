@@ -42,7 +42,7 @@ std::string Handler::GetRequestURI()
 
 // ------------- METHODS -------------
 
-void Handler::ParseRequestHeader(char *req)
+void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 {
 	int delimiter_position;
 	std::string current_line, key, value;
@@ -70,6 +70,7 @@ void Handler::ParseRequestHeader(char *req)
 
 	if (!this->validateRequest())
 		return;
+	
 	// TODO vlaidate the request header content
 	// Print Header key and values
 	// std::cout << "----------------- Request Header ---------------------\n";
