@@ -18,6 +18,7 @@ void    Server::GetRequest()
         exit(1);
     }
     // Printing the request
+    std::cout << "--------------------------------------------------------------\n";
     write(1, requested_data, msg_received);
 }
 void    Server::ResponseHeader()
