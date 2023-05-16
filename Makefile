@@ -5,6 +5,7 @@ FILES = main.cpp \
 	srcs/Server.cpp \
 	srcs/Handler.cpp \
 	srcs/Shared.cpp \
+	srcs/Config.cpp \
 	#srcs/Client.cpp
 
 HEADERS = includes/Server.hpp \

@@ -16,7 +16,7 @@ std::string Handler::GetMimeType()
 		if (it != mime_map.mime_types.end())
 			return (it->second);
 	}
-	// other cases should be handled
+	// other cases that should be handled
 	return ("text/html");
 }
 
@@ -47,10 +47,10 @@ void Handler::ParseRequestHeader(char *req)
 	std::string current_line, key, value, request_line;
 	std::stringstream request_stream(req);
 
-	std::getline(request_stream, request_line);					// Request-line
+	std::getline(request_stream, request_line);						// Request-line
 	std::stringstream request_line_stream(request_line);
 	request_line_stream >> std::skipws >> std::ws >> this->_method;	// Streaming methode into _methode while take care of white spaces
-	request_line_stream >> std::skipws >> std::ws >> this->_path;		// same for path
+	request_line_stream >> std::skipws >> std::ws >> this->_path;	// same for path
 
 	while (getline(request_stream >> std::ws >> std::skipws, current_line, '\n'))
 	{
