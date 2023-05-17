@@ -308,6 +308,7 @@ void    GlobalConfig::PrintServers(void)
         PrintServerConfig(i);
 }
 
+// --------------------- ACCESSOR ----------------
 unsigned int GlobalConfig::GetServerCount(void)
 {
     return (_ServerCount);

@@ -1,5 +1,36 @@
 #include "../includes/Handler.hpp"
 
+void Handler::printRequstData()
+{
+	// Print Header key and values
+	std::cout << "----------------- Request Header ---------------------\n";
+	std::cout << "method: |" << this->_method << "|\n";
+	std::cout << "path: |" << this->_uri << "|\n";
+	for (std::map<std::string, std::string>::const_iterator it = this->_req_header.begin(); it != this->_req_header.end(); ++it)
+	{
+		std::cout << it->first << ": |" << it->second << "|\n";
+	}
+}
+
+std::string errorResponse(std::string statusCode)
+{
+	Shared shared;
+    std::stringstream response;
+    std::string statusMessage = shared.status_codes[statusCode];
+
+    // TODO: check for this error page in config first
+    response << "HTTP/1.1 " << statusCode << " " << statusMessage << "\r\n";
+    response << "Content-Type: text/html\r\n";
+    response << "Connection: close\r\n";
+    response << "\r\n";
+    response << "<html><head><title>" << statusCode << " " << statusMessage << "</title></head>";
+    response << "<body><h1>" << statusCode << " " << statusMessage << "</h1>";
+    response << "<p>This is a simple HTML page for the " << statusCode << " " << statusMessage << " status.</p>";
+    response << "</body></html>";
+
+    return response.str();
+}
+
 std::string Handler::GetMimeType()
 {
 	Shared mime_map;
@@ -44,7 +75,7 @@ std::string Handler::GetRequestURI()
 
 void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 {
-    (void)config;
+	(void)config;
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
@@ -56,7 +87,7 @@ void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 	std::stringstream request_stream(header);
 
 	request_stream >> std::skipws >> std::ws >> this->_method; // Streaming methode into _methode while take care of white spaces
-	request_stream >> std::skipws >> std::ws >> this->_uri;   // same for path
+	request_stream >> std::skipws >> std::ws >> this->_uri;	   // same for path
 	std::getline(request_stream, current_line);				   // skip the remaining part of the request line (HTTP/1.1)
 
 	while (getline(request_stream >> std::ws >> std::skipws, current_line, '\n'))
@@ -68,19 +99,11 @@ void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 		this->_req_header[key] = value;												// storing key and value in map
 	}
 
-
+	// Validate request content
 	if (!this->validateRequest(config))
 		return;
-	
-	// TODO vlaidate the request header content
-	// Print Header key and values
-	// std::cout << "----------------- Request Header ---------------------\n";
-	// std::cout << "method: |" << this->_method << "|\n";
-	// std::cout << "path: |" << this->_uri << "|\n";
-	// for (std::map<std::string, std::string>::const_iterator it = this->_req_header.begin(); it != this->_req_header.end(); ++it)
-	// {
-	// 	std::cout << it->first << ": |" << it->second << "|\n";
-	// }
+
+	//
 	if (this->_method == "GET")
 		this->HandleGet();
 	else if (this->_method == "POST")
@@ -90,23 +113,21 @@ void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 }
 
 // Check for Possiple error in the Request
-bool	Handler::validateRequest(ServerConfig &config)
+bool Handler::validateRequest(ServerConfig &config)
 {
 	// if Transfer-Encoding exist and not match [chunked]
-	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end()
-		&& this->_req_header["Transfer-Encoding"] != "chunked")
+	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
 	{
 		// TODO: 501 not implemented
 		return false;
 	}
 	// if both Transfer-Encoding and Content-Length not provided
-	if (this->_req_header.find("Transfer-Encoding") == this->_req_header.end()
-		&& this->_req_header.find("Content-Length") == this->_req_header.end())
+	if (this->_req_header.find("Transfer-Encoding") == this->_req_header.end() && this->_req_header.find("Content-Length") == this->_req_header.end())
 	{
 		// TODO: 400 bad request
 		return false;
 	}
-    // URI should start with a leading slash ("/") and not contain any illegal characters
+	// URI should start with a leading slash ("/") and not contain any illegal characters
 	if (this->validateURI(this->_uri))
 	{
 		// TODO: 400 Bad requst
@@ -119,8 +140,7 @@ bool	Handler::validateRequest(ServerConfig &config)
 		return false;
 	}
 	//  Request body size should not be more than [client_body_size] from confing file
-	if (this->_req_header.find("Content-Length") != this->_req_header.end()
-		&& std::stoll(this->_req_header["Content-Length"]) > std::stoll(config._client_body_size))
+	if (this->_req_header.find("Content-Length") != this->_req_header.end() && std::stoll(this->_req_header["Content-Length"]) > std::stoll(config.GetClientBodySize()))
 	{
 		// TODO: 413 Payload Too Large
 		return false;
@@ -132,26 +152,48 @@ bool	Handler::validateRequest(ServerConfig &config)
 bool Handler::matchLocation(ServerConfig &config)
 {
 	std::string path = this->_uri;
+	std::vector<ServerLocation> serverLocations = config.GetLocationsVec();
+
+	// Seperate Path from args if there is any
 	if (this->_uri.find('?') != std::string::npos)
 		path = this->_uri.substr(0, this->_uri.find('?'));
-	// for (int i = 0; i < config._locations.size(); i++)
-	// 	if()
-	(void) config;
+
+	// match path with to the right location
+	size_t i;
+	for (i = 0; i < serverLocations.size(); i++)
+	{
+		if (serverLocations[i].GetLocationPath() == path)
+		{
+			std::vector<std::string> allowedMethods = serverLocations[i].GetAllowedMethodsVec();
+			if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
+			{
+				// TODO: 405 Method not allowed
+				return false;
+			}
+			// Check for location redirection
+			break;
+		}
+	}
+	if (i == serverLocations.size())
+	{
+		// TODO: 404 Not found
+		return false;
+	}
 	return true;
 }
 
 // Check for any any illegal characters in the URI
-bool Handler::validateURI(const std::string& uri)
+bool Handler::validateURI(const std::string &uri)
 {
-    // Check if the URI starts with a leading slash ("/")
-    if (uri.empty() || uri[0] != '/')
-        return false;
+	// Check if the URI starts with a leading slash ("/")
+	if (uri.empty() || uri[0] != '/')
+		return false;
 
-    // Check for any invalid characters in the URI
-    const std::string invalidChars = " <>{}|\\^`";
-    if (uri.find_first_of(invalidChars) != std::string::npos)
-        return false;
-    return true;
+	// Check for any invalid characters in the URI
+	const std::string invalidChars = " <>{}|\\^`";
+	if (uri.find_first_of(invalidChars) != std::string::npos)
+		return false;
+	return true;
 }
 
 void Handler::HandlePost(char *body)
@@ -168,7 +210,7 @@ void Handler::HandlePost(char *body)
 		if (!file)
 		{
 			std::cerr << "Error : Failed to open file\n";
-        	exit(1);
+			exit(1);
 		}
 		else
 		{
@@ -185,4 +227,4 @@ void Handler::HandlePost(char *body)
 
 void Handler::HandleGet() {}
 
-void Handler::HandleDelete() {} 
+void Handler::HandleDelete() {}

@@ -14,8 +14,13 @@ struct cgi
 
 class ServerLocation
 {
+    /*
+    TODO: add a redirection flag (bool var) to handle the case of a location that performs a redirection:
+        location /old {
+            return 301 http://example.com/new;
+        }
+    */
     protected:
-
         std::string                 _LocationPath;
         int                         _AutoIndex;
         cgi                         _CgiInfo;
@@ -40,7 +45,10 @@ class ServerConfig : public ServerLocation
         std::string                 _Host;
         std::string                 _ServerName;
         std::string                 _ClientBodySize;
-        std::string                 _ErrorPage;
+        // TODO: note that we may have error page for each error code
+        // soo changing this to somthing like map[key(error code)] = value(path to the page)
+        // and validaitng that path brfore save it will be very usefull
+        std::string                 _ErrorPage; 
         std::vector<ServerLocation> _LocationsVec;
     public:
         ServerConfig();

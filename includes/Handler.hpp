@@ -38,6 +38,7 @@ class Handler
 		bool	validateRequest(ServerConfig &config);
 		bool 	matchLocation(ServerConfig &config);
 		bool 	validateURI(const std::string& uri);
+		void	printRequstData();
 
 
 };
