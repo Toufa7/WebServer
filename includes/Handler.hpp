@@ -2,28 +2,28 @@
 #define HANDLER_HPP
 
 #include <iostream>
+#include <sys/socket.h>
 #include <map>
 #include <cstring>
 #include <sstream>
 #include <unistd.h>
-#include <fstream> 
 #include <ios>
-#include <regex>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <fstream>
 #include "Shared.hpp"
 #include "Config.hpp"
 
 class Handler
 {
 	public:
-		Handler();
-		~Handler();
-
-		void		ParseRequestHeader(char *req, ServerConfig &config);
+		void		ParseRequestHeader(char *req);
 
  		std::string GetRequestMethod();
 		std::string GetRequestURI();
 		std::string GetMimeType();
 		std::string GetStatusCode();
+		void 		setConfig(ServerConfig &config);
 
 	private:
     	std::map<std::string, std::string> _req_header;
@@ -31,14 +31,18 @@ class Handler
 		std::string _uri; // The Request-URI (Uniform Resource Identifier) 
 		std::string _status_code;
 		std::string _status_text;
+		Shared 		_shared;
+		ServerConfig _config;
 
 		void	HandlePost(char *body);
 		void	HandleGet();
 		void	HandleDelete();
-		bool	validateRequest(ServerConfig &config);
-		bool 	matchLocation(ServerConfig &config);
+		bool	validateRequest();
+		bool 	matchLocation();
 		bool 	validateURI(const std::string& uri);
 		void	printRequstData();
+		void    fileResponse(std::string path, std::string statusCode);
+		void 	errorResponse(std::string statusCode);
 
 
 };

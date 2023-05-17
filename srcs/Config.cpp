@@ -191,7 +191,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
     /*------------------------------------- find location path -------------------------------------*/
     key_pos = location.find("location ");
     value_pos = location.find("{", key_pos + 1);
-    location_tmp._LocationPath = location.substr((key_pos + 9), value_pos - (key_pos + 9));
+    location_tmp._LocationPath = location.substr((key_pos + 9), value_pos - (key_pos + 10));
     /*----------------------------------- end find location path -----------------------------------*/
 
     /*----------------------------------------- allowed methods ----------------------------------------*/
@@ -309,6 +309,7 @@ void    GlobalConfig::PrintServers(void)
 }
 
 // --------------------- ACCESSOR ----------------
+
 unsigned int GlobalConfig::GetServerCount(void)
 {
     return (_ServerCount);
@@ -322,6 +323,11 @@ std::vector<ServerConfig>& GlobalConfig::GetServersVector(void)
 unsigned int                    ServerConfig::GetPort(void)
 {
     return _Port;    
+}
+
+int                    ServerConfig::getClientSocket(void)
+{
+    return this->_clientSocket;    
 }
 
 std::string                     ServerConfig::GetHost(void)
@@ -376,4 +382,11 @@ std::string ServerLocation::GetUpload(void)
 std::vector<std::string> ServerLocation::GetAllowedMethodsVec(void)
 {
     return _AllowedMethodsVec;
+}
+
+
+
+void ServerConfig::setClientSocket(int n)
+{
+    this->_clientSocket = n;  
 }

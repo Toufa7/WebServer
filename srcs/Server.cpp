@@ -1,9 +1,13 @@
 #include "../includes/Server.hpp"
 
+//  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
+
 Server::Server(ServerConfig &config)
 {
     this->_config = config;
 }
+
+// ------------- METHODS -------------
 
 void    Server::Init()
 {
@@ -25,54 +29,6 @@ void    Server::GetRequest()
     // Printing the request
     std::cout << "--------------------------------------------------------------\n";
     write(1, requested_data, msg_received);
-}
-void    Server::ResponseHeader()
-{
-    int         status_code = 200;
-    std::string status_text = " OK";
-    response_header.assign( "HTTP/1.1 " + std::to_string(status_code) + status_text + CRLF
-                            "Server: Allah Y7ssen L3wan\r\n"
-                            "Content-Length: "  + std::to_string(content_length) + CRLF
-                            "Content-Type: "    + this->_handler.GetMimeType() + CRLF
-                            "Connection: close\r\n\r\n");
-}
-
-void    Server::SendResponse()
-{
-    struct stat file_infos;
-    int         fd;
-    char        *response_body;
-    int         nbyte;
-
-    if ((fd = open("test/homepage.html", O_RDONLY)) == -1)
-    {
-        std::cerr << "Error : Opening failed\n";
-        exit(1);
-    }
-    if (fstat(fd, &file_infos) == -1)
-    {
-        std::cerr << "Error : Failed to obtain informations\n";
-        exit(1);
-    }
-    response_body = new char[file_infos.st_size];
-    content_length = file_infos.st_size;
-    ResponseHeader();
-    if (send(client_socket, response_header.c_str(), response_header.length(), 0) == -1)
-    {   
-        std::cerr << "Error : Receiving failed\n";
-        exit(1);
-    }
-    if ((nbyte = read(fd, response_body, file_infos.st_size)) == -1)
-    {
-        std::cerr << "Error : Reading failed\n";
-        exit(1);
-    }
-    if (send(client_socket, response_body, nbyte, 0) == -1)
-    {   
-        std::cerr << "Error : Receiving failed\n";
-        exit(1);
-    }
-    delete [] response_body;
 }
 
 void    Server::Start()
@@ -106,8 +62,9 @@ void    Server::Start()
             exit(1);
         }
         GetRequest();
-        this->_handler.ParseRequestHeader(requested_data, this->_config);
-        SendResponse();
+        this->_config.setClientSocket(client_socket);
+        this->_handler.setConfig(this->_config);
+        this->_handler.ParseRequestHeader(requested_data);
     }
     close(client_socket);
 }

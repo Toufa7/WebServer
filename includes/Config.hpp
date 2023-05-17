@@ -19,6 +19,9 @@ class ServerLocation
         location /old {
             return 301 http://example.com/new;
         }
+        location /new {
+            return 301 http://example.com/new;
+        }
     */
     protected:
         std::string                 _LocationPath;
@@ -41,6 +44,7 @@ class ServerLocation
 class ServerConfig : public ServerLocation
 {
     protected:
+        int                         _clientSocket;
         unsigned int                _Port;
         std::string                 _Host;
         std::string                 _ServerName;
@@ -56,12 +60,14 @@ class ServerConfig : public ServerLocation
         void                            ParseServerLocation(std::string location);
         void                            PrintServerLocation(unsigned int index);
         unsigned int                    GetPort(void);
+        int                             getClientSocket(void);
         std::string                     GetHost(void);
         std::string                     GetServerName(void);
         std::string                     GetClientBodySize(void);
         std::string                     GetErrorPage(void);
         std::vector<ServerLocation>&    GetLocationsVec(void);
 
+        void                            setClientSocket(int n);
 };
 
 class GlobalConfig : public ServerConfig

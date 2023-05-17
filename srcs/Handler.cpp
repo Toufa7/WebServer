@@ -1,5 +1,28 @@
 #include "../includes/Handler.hpp"
 
+//  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
+
+
+//  ------------- ACCESSOR --------------------
+
+// Request method getter
+std::string Handler::GetRequestMethod()
+{
+	return (this->_method);
+}
+
+// Request path getter
+std::string Handler::GetRequestURI()
+{
+	return (this->_uri);
+}
+
+void Handler::setConfig(ServerConfig &config) {
+	this->_config = config;
+}
+
+// ------------- METHODS -------------
+
 void Handler::printRequstData()
 {
 	// Print Header key and values
@@ -12,23 +35,73 @@ void Handler::printRequstData()
 	}
 }
 
-std::string errorResponse(std::string statusCode)
+void Handler::errorResponse(std::string statusCode)
 {
-	Shared shared;
     std::stringstream response;
-    std::string statusMessage = shared.status_codes[statusCode];
-
+    std::string statusMessage = this->_shared.status_codes[statusCode];
+	std::string htmlContent = "<html><head><title>" + statusCode + " " + statusMessage + "</title></head>"
+                              "<body><h1>" + statusCode + " " + statusMessage + "</h1></body></html>";
     // TODO: check for this error page in config first
     response << "HTTP/1.1 " << statusCode << " " << statusMessage << "\r\n";
+	response << "Server: " << this->_config.GetServerName() << "\r\n";
     response << "Content-Type: text/html\r\n";
+	response << "Content-Length: " << htmlContent.length() << "\r\n";
     response << "Connection: close\r\n";
     response << "\r\n";
-    response << "<html><head><title>" << statusCode << " " << statusMessage << "</title></head>";
-    response << "<body><h1>" << statusCode << " " << statusMessage << "</h1>";
-    response << "<p>This is a simple HTML page for the " << statusCode << " " << statusMessage << " status.</p>";
-    response << "</body></html>";
+	response << htmlContent;
 
-    return response.str();
+    if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+    {   
+        std::cerr << "Error : Receiving failed\n";
+        exit(1);
+    }
+	std::cout << "---------------------- response --------------------- " << std::endl;
+	std::cout << response.str() << std::endl;
+}
+
+
+void    Handler::fileResponse(std::string path, std::string statusCode)
+{
+	std::stringstream response;
+	std::string statusMessage = this->_shared.status_codes[statusCode];
+    struct stat file_infos;
+    int         fd;
+    char        *response_body;
+    int         nbyte;
+
+    if ((fd = open(path.c_str(), O_RDONLY)) == -1)
+    {
+        std::cerr << "Error : Opening failed\n";
+        exit(1);
+    }
+    if (fstat(fd, &file_infos) == -1)
+    {
+        std::cerr << "Error : Failed to obtain informations\n";
+        exit(1);
+    }
+    response_body = new char[file_infos.st_size];
+    if ((nbyte = read(fd, response_body, file_infos.st_size)) == -1)
+    {
+        std::cerr << "Error : Reading failed\n";
+        exit(1);
+    }
+
+	response << "HTTP/1.1 " << statusCode << " " << statusMessage << "\r\n";
+	response << "Server: " << this->_config.GetServerName() << "\r\n";
+    response << "Content-Type: text/html\r\n";
+	response << "Content-Length: " << file_infos.st_size << "\r\n";
+    response << "Connection: close\r\n";
+    response << "\r\n";
+	response << response_body;
+
+    if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+    {   
+        std::cerr << "Error : Receiving failed\n";
+        exit(1);
+    }
+	std::cout << "---------------------- response --------------------- " << std::endl;
+	std::cout << response.str() << std::endl;
+    delete [] response_body;
 }
 
 std::string Handler::GetMimeType()
@@ -51,31 +124,8 @@ std::string Handler::GetMimeType()
 	return ("text/html");
 }
 
-//  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
-
-Handler::Handler() {}
-
-Handler::~Handler() {}
-
-//  ------------- ACCESSOR --------------------
-
-// Request method getter
-std::string Handler::GetRequestMethod()
+void Handler::ParseRequestHeader(char *req)
 {
-	return (this->_method);
-}
-
-// Request path getter
-std::string Handler::GetRequestURI()
-{
-	return (this->_uri);
-}
-
-// ------------- METHODS -------------
-
-void Handler::ParseRequestHeader(char *req, ServerConfig &config)
-{
-	(void)config;
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
@@ -98,11 +148,9 @@ void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 		value = current_line.substr(delimiter_position + 2, current_line.length()); // [delimiter_position + 2] to remove the extra space before value
 		this->_req_header[key] = value;												// storing key and value in map
 	}
-
 	// Validate request content
-	if (!this->validateRequest(config))
+	if (!this->validateRequest())
 		return;
-
 	//
 	if (this->_method == "GET")
 		this->HandleGet();
@@ -113,46 +161,48 @@ void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 }
 
 // Check for Possiple error in the Request
-bool Handler::validateRequest(ServerConfig &config)
+bool Handler::validateRequest()
 {
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
 	{
-		// TODO: 501 not implemented
+		this->errorResponse("501");
 		return false;
 	}
 	// if both Transfer-Encoding and Content-Length not provided
-	if (this->_req_header.find("Transfer-Encoding") == this->_req_header.end() && this->_req_header.find("Content-Length") == this->_req_header.end())
+	if (this->_method == "POST" && this->_req_header.find("Transfer-Encoding") == this->_req_header.end() &&
+		this->_req_header.find("Content-Length") == this->_req_header.end())
 	{
-		// TODO: 400 bad request
+		this->errorResponse("400");
 		return false;
 	}
 	// URI should start with a leading slash ("/") and not contain any illegal characters
-	if (this->validateURI(this->_uri))
+	if (!this->validateURI(this->_uri))
 	{
-		// TODO: 400 Bad requst
+		this->errorResponse("400");
 		return false;
 	}
 	//  URI should not have more than 2048
 	if (this->_uri.length() > 2048)
 	{
-		// TODO: 414 requst uri too long
+		this->errorResponse("414");
 		return false;
 	}
 	//  Request body size should not be more than [client_body_size] from confing file
-	if (this->_req_header.find("Content-Length") != this->_req_header.end() && std::stoll(this->_req_header["Content-Length"]) > std::stoll(config.GetClientBodySize()))
+	if (this->_req_header.find("Content-Length") != this->_req_header.end() && 
+		std::stoll(this->_req_header["Content-Length"]) > std::stoll(this->_config.GetClientBodySize()))
 	{
-		// TODO: 413 Payload Too Large
+		this->errorResponse("413");
 		return false;
 	}
-	return this->matchLocation(config);
+	return this->matchLocation();
 }
 
 // match location from the config file and validate method
-bool Handler::matchLocation(ServerConfig &config)
+bool Handler::matchLocation()
 {
 	std::string path = this->_uri;
-	std::vector<ServerLocation> serverLocations = config.GetLocationsVec();
+	std::vector<ServerLocation> serverLocations = this->_config.GetLocationsVec();
 
 	// Seperate Path from args if there is any
 	if (this->_uri.find('?') != std::string::npos)
@@ -167,7 +217,7 @@ bool Handler::matchLocation(ServerConfig &config)
 			std::vector<std::string> allowedMethods = serverLocations[i].GetAllowedMethodsVec();
 			if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
 			{
-				// TODO: 405 Method not allowed
+				this->errorResponse("405");
 				return false;
 			}
 			// Check for location redirection
@@ -176,7 +226,7 @@ bool Handler::matchLocation(ServerConfig &config)
 	}
 	if (i == serverLocations.size())
 	{
-		// TODO: 404 Not found
+		this->errorResponse("404");
 		return false;
 	}
 	return true;
@@ -223,8 +273,13 @@ void Handler::HandlePost(char *body)
 			// File saved successfully
 		}
 	}
+	fileResponse("test/homepage.html", "200");
 }
 
-void Handler::HandleGet() {}
+void Handler::HandleGet() {
+	fileResponse("test/homepage.html", "200");
+}
 
-void Handler::HandleDelete() {}
+void Handler::HandleDelete() {
+	fileResponse("test/homepage.html", "200");
+}
