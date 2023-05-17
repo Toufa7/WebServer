@@ -23,6 +23,15 @@ struct redirection
 
 class ServerLocation
 {
+    /*
+    TODO: add a redirection flag (bool var) to handle the case of a location that performs a redirection:
+        location /old {
+            return 301 http://example.com/new;
+        }
+        location /new {
+            return 301 http://example.com/new;
+        }
+    */
     protected:
         int                         _AutoIndex;
         cgi                         _CgiInfo;
@@ -46,6 +55,7 @@ class ServerLocation
 class ServerConfig : public ServerLocation
 {
     protected:
+        int                         _clientSocket;
         unsigned int                _Port;
         int                         _ServerSocket;
         std::string                 _Host;
@@ -61,6 +71,7 @@ class ServerConfig : public ServerLocation
         ~ServerConfig();
         int                             GetServerSocket(void);
         unsigned int                    GetPort(void);
+        int                             getClientSocket(void);
         std::string                     GetHost(void);
         std::string                     GetClientBodySize(void);
         std::string                     GetErrorPage(void);
@@ -70,6 +81,7 @@ class ServerConfig : public ServerLocation
         std::string        GetServerNames(void);
         std::vector<ServerLocation>&    GetLocationsVec(void);
 
+        void                            setClientSocket(int n);
 };
 
 class GlobalConfig : public ServerConfig

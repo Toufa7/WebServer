@@ -28,6 +28,7 @@
 class Server
 {
     public:
+        Server();
         Server(ServerConfig &config);
         // Member Variables
         int                     server_socket; // The server listen on this socket
