@@ -9,16 +9,13 @@ int main(int ac, char **av)
 
     if (ac == 2)
     {
-        configuration.parse_config_file(av[1]);
-        configuration.print_server_config(0);
-        std::cout << "locations count ---> " << configuration.servers[0]._locations.size() << "\n";
-        //WebServer.Start();
+        configuration.ParseConfigFile(av[1]);
+        configuration.PrintServers();
+        Server          WebServer(configuration.GetServersVector()[0]);
+        WebServer.Start();
     }
     else
-    {
-        std::cout << "Missing config file." << "\n";
-        return (1);
-    }
-    Server          WebServer(configuration.servers[0]);
+        InvalidConfigFile("Missing config file.");
+
     return (0);
 }

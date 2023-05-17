@@ -44,6 +44,7 @@ std::string Handler::GetRequestURI()
 
 void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 {
+    (void)config;
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
