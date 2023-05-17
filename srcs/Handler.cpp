@@ -68,7 +68,7 @@ void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 	}
 
 
-	if (!this->validateRequest())
+	if (!this->validateRequest(config))
 		return;
 	
 	// TODO vlaidate the request header content
@@ -89,7 +89,7 @@ void Handler::ParseRequestHeader(char *req, ServerConfig &config)
 }
 
 // Check for Possiple error in the Request
-bool	Handler::validateRequest()
+bool	Handler::validateRequest(ServerConfig &config)
 {
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end()
@@ -118,17 +118,24 @@ bool	Handler::validateRequest()
 		return false;
 	}
 	//  Request body size should not be more than [client_body_size] from confing file
-	if (this->_uri.length() > 2048)
+	if (this->_req_header.find("Content-Length") != this->_req_header.end()
+		&& std::stoll(this->_req_header["Content-Length"]) > std::stoll(config._client_body_size))
 	{
-		// TODO: 414 requst uri too long
+		// TODO: 413 Payload Too Large
 		return false;
 	}
-	return this->matchLocation();
+	return this->matchLocation(config);
 }
 
 // match location from the config file and validate method
-bool Handler::matchLocation()
+bool Handler::matchLocation(ServerConfig &config)
 {
+	std::string path = this->_uri;
+	if (this->_uri.find('?') != std::string::npos)
+		path = this->_uri.substr(0, this->_uri.find('?'));
+	// for (int i = 0; i < config._locations.size(); i++)
+	// 	if()
+	(void) config;
 	return true;
 }
 

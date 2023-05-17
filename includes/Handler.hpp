@@ -35,8 +35,8 @@ class Handler
 		void	HandlePost(char *body);
 		void	HandleGet();
 		void	HandleDelete();
-		bool	validateRequest();
-		bool 	matchLocation();
+		bool	validateRequest(ServerConfig &config);
+		bool 	matchLocation(ServerConfig &config);
 		bool 	validateURI(const std::string& uri);
 
 
