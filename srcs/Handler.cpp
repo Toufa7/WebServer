@@ -43,7 +43,7 @@ void Handler::errorResponse(std::string statusCode)
                               "<body><h1>" + statusCode + " " + statusMessage + "</h1></body></html>";
     // TODO: check for this error page in config first
     response << "HTTP/1.1 " << statusCode << " " << statusMessage << "\r\n";
-	response << "Server: " << this->_config.GetServerName() << "\r\n";
+	response << "Server: " << this->_config.GetServerNames() << "\r\n";
     response << "Content-Type: text/html\r\n";
 	response << "Content-Length: " << htmlContent.length() << "\r\n";
     response << "Connection: close\r\n";
@@ -87,7 +87,7 @@ void    Handler::fileResponse(std::string path, std::string statusCode)
     }
 
 	response << "HTTP/1.1 " << statusCode << " " << statusMessage << "\r\n";
-	response << "Server: " << this->_config.GetServerName() << "\r\n";
+	response << "Server: " << this->_config.GetServerNames() << "\r\n";
     response << "Content-Type: text/html\r\n";
 	response << "Content-Length: " << file_infos.st_size << "\r\n";
     response << "Connection: close\r\n";

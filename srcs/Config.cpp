@@ -6,6 +6,35 @@ void    InvalidConfigFile(std::string err_message)
     exit(1);
 }
 
+ServerConfig::ServerConfig(const ServerConfig & ServerObj)
+{
+    *this = ServerObj;
+}
+
+ServerConfig & ServerConfig::operator = (const ServerConfig & ServerObj)
+{
+    this->_clientSocket = ServerObj._clientSocket;
+    this->_ServerSocket = ServerObj._ServerSocket;
+    this->_Port = ServerObj._Port;
+    this->_Host = ServerObj._Host;
+    this->_ServerNames = ServerObj._ServerNames;
+    this->_ClientBodySize = ServerObj._ClientBodySize;
+    this->_LocationsVec = ServerObj._LocationsVec;
+    this->_ErrorPageMap = ServerObj._ErrorPageMap;
+    return *this;
+}
+
+// GlobalConfig::GlobalConfig(const GlobalConfig & ServerObj)
+// {
+//     *this = ServerObj;
+// }
+
+// GlobalConfig & GlobalConfig::operator = (const GlobalConfig & ServerObj)
+// {
+//     std::map<std::string , std::string>::const_iterator it;
+//     return *this;
+// }
+
 ServerLocation::ServerLocation()
 {
     //all ints shall be intialised by 0
@@ -34,12 +63,11 @@ ServerConfig::ServerConfig()
     _Port = 8080;
     _Host = "n/a";
     _ClientBodySize = "n/a";
-    _ErrorPage = "n/a";   
 }
 
 ServerConfig::~ServerConfig()
 {
-    //config destructor
+
 }
 
 GlobalConfig::GlobalConfig()
@@ -114,8 +142,8 @@ void GlobalConfig::ParseConfigFile(char *av)
 void    GlobalConfig::ParseServerConfig(std::string server)
 {
     int key_pos, colon_pos, value_pos, scolon_pos;
-    std::string location;
-    GlobalConfig tmp;
+    std::string location, tmp_str;
+    ServerConfig tmp;
 
     _ServerCount++;
     /*------------------------------- host and port -----------------------------------*/
@@ -136,16 +164,19 @@ void    GlobalConfig::ParseServerConfig(std::string server)
     if (key_pos > 0)
     {
         scolon_pos = server.find(";", (key_pos + 13));
-        tmp._ServerNames = server.substr((key_pos + 13), (scolon_pos + 1) - (key_pos + 13));
-        tmp._ServerNames.pop_back();
-        std::cout << "--->" << tmp._ServerNames << "\n";
+        tmp._ServerNames = server.substr((key_pos + 13), scolon_pos - (key_pos + 13));
+        value_pos = tmp._ServerNames.find(" ");
+        if (value_pos != -1)
+            InvalidConfigFile("Invalid config file : Wrong error page directive.");
 
+        //std::cout << "--->" << tmp._ServerNames << "\n";
+        /* In case we wanted to split each server names
         std::stringstream ss(tmp._ServerNames);
-
         std::istream_iterator<std::string> begin(ss);
         std::istream_iterator<std::string> end;
         std::vector<std::string> vstrings(begin, end);
         std::cout << "--->" << vstrings[1] << "\n";
+         */
     }
     else
         InvalidConfigFile("Invalid config file : server names directive is not found.");
@@ -166,8 +197,18 @@ void    GlobalConfig::ParseServerConfig(std::string server)
     key_pos = server.find("error_page ");
     if (key_pos > 0)
     {
-        scolon_pos = server.find(";", (key_pos + 11));
-        tmp._ErrorPage = server.substr((key_pos + 11), scolon_pos - (key_pos + 11));
+        while (1)
+        {
+            if (key_pos >= 0)
+            {
+                scolon_pos = server.find(";", (key_pos + 11));
+                tmp_str = server.substr((key_pos + 11), scolon_pos - (key_pos + 11));
+                tmp.ParseErrorPage(tmp_str);
+            }
+            else
+                break;
+            key_pos = server.find("error_page ", key_pos + 1);
+        }
     }
     /*----------------------------------- end of error page -----------------------------------*/
 
@@ -290,9 +331,21 @@ void    GlobalConfig::PrintServerConfig(unsigned int index)
         std::cout << "Server index              : " << index << "\n";
         std::cout << "Server host               : " << _ServersConfigVec[index].GetHost() << "\n";
         std::cout << "Server port               : " << _ServersConfigVec[index].GetPort() << "\n";
-//        if (_ServersConfigVec[index].GetServerName() != "n/a")
-//            std::cout << "Server name               : " << _ServersConfigVec[index].GetServerName() << "\n";
+        if (_ServersConfigVec[index].GetServerNames() != "n/a")
+            std::cout << "Server name               : " << _ServersConfigVec[index].GetServerNames() << "\n";
         std::cout << "Server client body size   : " << _ServersConfigVec[index].GetClientBodySize() << "\n";
+
+        // if (GetErrorPageMap().empty() == FALSE)
+        // {
+        //     std::map<std::string, std::string>::iterator it;
+
+        //     std::cout << "\nServer error page(s)      : " << "\n";
+        //     for (it = _ErrorPageMap.begin(); it != _ErrorPageMap.end(); ++it)
+        //     {
+        //         std::cout << "Error code        : " << it->first << "\n";
+        //         std::cout << "Error page path   : " << it->second << "\n";
+        //     }
+        // }
         std::cout << "\nServer location(s)\n\n";
         for (unsigned long i = 0; i < _ServersConfigVec[index].GetLocationsVec().size(); i++) {
             _ServersConfigVec[index].PrintServerLocation(i);
@@ -350,14 +403,14 @@ void    GlobalConfig::PrintServers(void)
 
 // --------------------- ACCESSOR ----------------
 
-unsigned int GlobalConfig::GetServerCount(void)
-{
-    return (_ServerCount);
-}
-
 std::vector<ServerConfig>& GlobalConfig::GetServersVector(void)
 {
     return (_ServersConfigVec);
+}
+
+unsigned int GlobalConfig::GetServerCount(void)
+{
+    return (_ServerCount);
 }
 
 unsigned int ServerConfig::GetPort(void)
@@ -383,10 +436,6 @@ std::string ServerConfig::GetServerNames(void)
 std::string ServerConfig::GetClientBodySize(void)
 {
     return (_ClientBodySize);
-}
-std::string ServerConfig::GetErrorPage(void)
-{
-    return  (_ErrorPage);
 }
 
 std::vector<ServerLocation>& ServerConfig::GetLocationsVec(void)
@@ -440,11 +489,22 @@ redirection&    ServerLocation::GetRedirectionInfo(void)
     return (_RedirectionInfo);
 }
 
-
-
-
-
 void ServerConfig::setClientSocket(int n)
 {
     this->_clientSocket = n;  
+}
+
+void ServerConfig::ParseErrorPage(std::string error_directive)
+{
+    
+    std::stringstream ss(error_directive);
+    std::istream_iterator<std::string> begin(ss);
+    std::istream_iterator<std::string> end;
+    std::vector<std::string> SplitedStringsVec(begin, end);
+    this->_ErrorPageMap[SplitedStringsVec[0]] = SplitedStringsVec[1];
+}
+
+std::map<std::string, std::string>& ServerConfig::GetErrorPageMap(void)
+{
+    return _ErrorPageMap;
 }
