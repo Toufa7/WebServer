@@ -55,7 +55,7 @@ void Handler::errorResponse(std::string statusCode)
         std::cerr << "Error : Receiving failed\n";
         exit(1);
     }
-	std::cout << "---------------------- response --------------------- " << std::endl;
+	std::cout << "\n---------------------- error response --------------------- " << std::endl;
 	std::cout << response.str() << std::endl;
 }
 
@@ -68,7 +68,6 @@ void    Handler::fileResponse(std::string path, std::string statusCode)
     int         fd;
     char        *response_body;
     int         nbyte;
-
     if ((fd = open(path.c_str(), O_RDONLY)) == -1)
     {
         std::cerr << "Error : Opening failed\n";
@@ -85,21 +84,23 @@ void    Handler::fileResponse(std::string path, std::string statusCode)
         std::cerr << "Error : Reading failed\n";
         exit(1);
     }
-
 	response << "HTTP/1.1 " << statusCode << " " << statusMessage << "\r\n";
 	response << "Server: " << this->_config.GetServerName() << "\r\n";
     response << "Content-Type: text/html\r\n";
 	response << "Content-Length: " << file_infos.st_size << "\r\n";
     response << "Connection: close\r\n";
     response << "\r\n";
-	response << response_body;
-
     if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
     {   
-        std::cerr << "Error : Receiving failed\n";
+        std::cerr << "Error : Sending failed\n";
         exit(1);
     }
-	std::cout << "---------------------- response --------------------- " << std::endl;
+	if (send(this->_config.getClientSocket(), response_body, nbyte, 0) == -1)
+    {   
+        std::cerr << "Error : Sending failed\n";
+        exit(1);
+    }
+	std::cout << "\n----------------------file response --------------------- " << std::endl;
 	std::cout << response.str() << std::endl;
     delete [] response_body;
 }
@@ -151,7 +152,7 @@ void Handler::ParseRequestHeader(char *req)
 	// Validate request content
 	if (!this->validateRequest())
 		return;
-	//
+	printRequstData();
 	if (this->_method == "GET")
 		this->HandleGet();
 	else if (this->_method == "POST")
@@ -248,15 +249,31 @@ bool Handler::validateURI(const std::string &uri)
 
 void Handler::HandlePost(char *body)
 {
-	std::string mimeType, boundry;
-	std::string content_type = this->_req_header["Content-Type"];
-	std::string encodingFormat = this->_req_header["Transfer-Encoding"];
-	mimeType = content_type.substr(0, content_type.find(';'));
-	mimeType = content_type.substr(content_type.find(';') + 2, content_type.length());
-	if (this->_req_header["Content-Type"] == "application/octet-stream")
+	(void) body;
+	std::string encodingFormat, boundary;
+	std::string mimeType = "application/octet-stream"; // Default MIME type
+	// Save MIME type and boundary if it exist
+	if (this->_req_header.find("Content-Type") != this->_req_header.end())
+	{
+		int semiPos = this->_req_header["Content-Type"].find(';');
+		if (semiPos != -1)
+		{
+			mimeType = this->_req_header["Content-Type"].substr(0, semiPos);
+			if (mimeType == "multipart/form-data")
+				boundary = this->_req_header["Content-Type"].substr(semiPos + 11, this->_req_header["Content-Type"].length());
+		}
+		else
+			mimeType = this->_req_header["Content-Type"];
+	}
+	// Save Transfer-Encoding if it exist. 
+	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
+		encodingFormat = this->_req_header["Transfer-Encoding"];
+	if (boundary.empty() && encodingFormat.empty())
 	{
 		// Create a file stream for writing
-		std::ofstream file("/tmp/file", std::ios::out | std::ios::binary);
+		std::string fileName = this->_shared.generateFileName("upload/", this->_shared.file_extensions[mimeType]);
+		std::cout << "---------> " << fileName << std::endl;
+		std::ofstream file(fileName, std::ios::out | std::ios::binary);
 		if (!file)
 		{
 			std::cerr << "Error : Failed to open file\n";
@@ -265,7 +282,7 @@ void Handler::HandlePost(char *body)
 		else
 		{
 			// Write the request body data to the file
-			file.write(body, std::stoi(this->_req_header["Content-Length"]));
+			file.write(body, std::stoull(this->_req_header["Content-Length"]) * 100);
 
 			// Close the file
 			file.close();

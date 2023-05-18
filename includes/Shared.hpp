@@ -17,7 +17,11 @@ class Shared
 	public:
 		Shared();
 
+
+		std::string generateFileName(const std::string& path, const std::string& fileExtension);
+
     	std::map<std::string, std::string> mime_types;
+    	std::map<std::string, std::string> file_extensions;
     	std::map<std::string, std::string> status_codes;
 };
 

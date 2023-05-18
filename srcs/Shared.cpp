@@ -17,8 +17,50 @@ Exceptions::~Exceptions() throw()
 
 Shared::Shared()
 {
-	// MIME Types
+	this->file_extensions["text/html"] = ".html";
+	this->file_extensions["text/css"] = ".css";
+	this->file_extensions["application/javascript"] = ".js";
+	this->file_extensions["application/json"] = ".json";
+	this->file_extensions["application/xml"] = ".xml";
+	this->file_extensions["text/plain"] = ".txt";
+	this->file_extensions["image/jpeg"] = ".jpg";
+	this->file_extensions["image/png"] = ".png";
+	this->file_extensions["image/gif"] = ".gif";
+	this->file_extensions["image/bmp"] = ".bmp";
+	this->file_extensions["image/x-icon"] = ".ico";
+	this->file_extensions["application/pdf"] = ".pdf";
+	this->file_extensions["application/zip"] = ".zip";
+	this->file_extensions["application/x-tar"] = ".tar";
+	this->file_extensions["application/gzip"] = ".gz";
+	this->file_extensions["application/x-rar-compressed"] = ".rar";
+	this->file_extensions["application/x-7z-compressed"] = ".7z";
+	this->file_extensions["audio/mpeg"] = ".mp3";
+	this->file_extensions["audio/wav"] = ".wav";
+	this->file_extensions["video/mp4"] = ".mp4";
+	this->file_extensions["video/x-msvideo"] = ".avi";
+	this->file_extensions["application/vnd.ms-powerpoint"] = ".ppt";
+	this->file_extensions["application/vnd.openxmlformats-officedocument.presentationml.presentation"] = ".pptx";
+	this->file_extensions["application/msword"] = ".doc";
+	this->file_extensions["application/vnd.openxmlformats-officedocument.wordprocessingml.document"] = ".docx";
+	this->file_extensions["application/vnd.ms-excel"] = ".xls";
+	this->file_extensions["application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"] = ".xlsx";
+	this->file_extensions["text/csv"] = ".csv";
+	this->file_extensions["application/x-shockwave-flash"] = ".swf";
+	this->file_extensions["image/svg+xml"] = ".svg";
+	this->file_extensions["video/mpeg"] = ".mpg";
+	this->file_extensions["video/webm"] = ".webm";
+	this->file_extensions["audio/ogg"] = ".ogg";
+	this->file_extensions["video/ogg"] = ".ogg";
+	this->file_extensions["image/webp"] = ".webp";
+	this->file_extensions["image/tiff"] = ".tif";
+	this->file_extensions["application/font-woff"] = ".woff";
+	this->file_extensions["application/font-woff2"] = ".woff2";
+	this->file_extensions["application/x-font-ttf"] = ".ttf";
+	this->file_extensions["application/x-font-opentype"] = ".otf";
+	this->file_extensions["application/vnd.ms-fontobject"] = ".eot";
+	this->file_extensions["application/octet-stream"] = ".bin";
 
+	// MIME Types
 	this->mime_types[".html"] = "text/html";
 	this->mime_types[".htm"] = "text/html";
 	this->mime_types[".css"] = "text/css";
@@ -128,4 +170,22 @@ Shared::Shared()
 	this->status_codes["508"] = "Loop Detected";
 	this->status_codes["510"] = "Not Extended";
 	this->status_codes["511"] = "Network Authentication Required";
+}
+
+
+std::string Shared::generateFileName(const std::string& path, const std::string& fileExtension)
+{
+	std::string fileName = path;
+    const std::string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+
+    // Seed the random number generator
+    std::srand(static_cast<unsigned int>(std::time(0)));
+
+    // Generate a random string for the file name
+    for (int i = 0; i < 10; ++i)
+        fileName += characters[std::rand() % characters.length()];
+
+    fileName += fileExtension;
+
+    return fileName;
 }
