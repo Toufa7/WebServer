@@ -3,3 +3,4 @@ Server
 *.o
 */*.o
 .vscode
+upload
