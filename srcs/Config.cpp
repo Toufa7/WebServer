@@ -6,10 +6,43 @@ void    InvalidConfigFile(std::string err_message)
     exit(1);
 }
 
+ServerConfig::ServerConfig(const ServerConfig & ServerObj)
+{
+    *this = ServerObj;
+}
+
+ServerConfig & ServerConfig::operator = (const ServerConfig & ServerObj)
+{
+    this->_clientSocket = ServerObj._clientSocket;
+    this->_ServerSocket = ServerObj._ServerSocket;
+    this->_Port = ServerObj._Port;
+    this->_Host = ServerObj._Host;
+    this->_ServerNames = ServerObj._ServerNames;
+    this->_ClientBodySize = ServerObj._ClientBodySize;
+    this->_LocationsVec = ServerObj._LocationsVec;
+    this->_ErrorPageMap = ServerObj._ErrorPageMap;
+    return *this;
+}
+
+// GlobalConfig::GlobalConfig(const GlobalConfig & ServerObj)
+// {
+//     *this = ServerObj;
+// }
+
+// GlobalConfig & GlobalConfig::operator = (const GlobalConfig & ServerObj)
+// {
+//     std::map<std::string , std::string>::const_iterator it;
+//     return *this;
+// }
+
 ServerLocation::ServerLocation()
 {
     //all ints shall be intialised by 0
     //and all strings by n/a 'not applicable'
+
+    _RedirectionInfo.RedirectionFlag = FALSE;
+    _RedirectionInfo.RedirectionCode = "n/a";
+    _RedirectionInfo.RedirectionPath = "n/a";
 
     _CgiInfo.type = "n/a";
     _CgiInfo.path = "n/a";
@@ -29,14 +62,12 @@ ServerConfig::ServerConfig()
 {
     _Port = 8080;
     _Host = "n/a";
-    _ServerName = "n/a";
     _ClientBodySize = "n/a";
-    _ErrorPage = "n/a";   
 }
 
 ServerConfig::~ServerConfig()
 {
-    //config destructor
+
 }
 
 GlobalConfig::GlobalConfig()
@@ -111,8 +142,8 @@ void GlobalConfig::ParseConfigFile(char *av)
 void    GlobalConfig::ParseServerConfig(std::string server)
 {
     int key_pos, colon_pos, value_pos, scolon_pos;
-    std::string location;
-    GlobalConfig tmp;
+    std::string location, tmp_str;
+    ServerConfig tmp;
 
     _ServerCount++;
     /*------------------------------- host and port -----------------------------------*/
@@ -128,14 +159,28 @@ void    GlobalConfig::ParseServerConfig(std::string server)
         InvalidConfigFile("Invalid config file : listen directive is not found.");
     /*------------------------------- End of host port --------------------------------*/
 
-    /*---------------------------- server_name -----------------------------------*/
-    key_pos = server.find("server_name ");
+    /*---------------------------- server_names -----------------------------------*/
+    key_pos = server.find("server_names ");
     if (key_pos > 0)
     {
-        scolon_pos = server.find(";", (key_pos + 12));
-        tmp._ServerName = server.substr((key_pos + 12), scolon_pos - (key_pos + 12));
+        scolon_pos = server.find(";", (key_pos + 13));
+        tmp._ServerNames = server.substr((key_pos + 13), scolon_pos - (key_pos + 13));
+        value_pos = tmp._ServerNames.find(" ");
+        if (value_pos != -1)
+            InvalidConfigFile("Invalid config file : Wrong error page directive.");
+
+        //std::cout << "--->" << tmp._ServerNames << "\n";
+        /* In case we wanted to split each server names
+        std::stringstream ss(tmp._ServerNames);
+        std::istream_iterator<std::string> begin(ss);
+        std::istream_iterator<std::string> end;
+        std::vector<std::string> vstrings(begin, end);
+        std::cout << "--->" << vstrings[1] << "\n";
+         */
     }
-    /*---------------------------- End of server_name --------------------------------*/
+    else
+        InvalidConfigFile("Invalid config file : server names directive is not found.");
+    /*---------------------------- End of server_names --------------------------------*/
 
     /*--------------------------------- client body size -------------------------------------*/
     key_pos = server.find("client_body_size ");
@@ -152,8 +197,18 @@ void    GlobalConfig::ParseServerConfig(std::string server)
     key_pos = server.find("error_page ");
     if (key_pos > 0)
     {
-        scolon_pos = server.find(";", (key_pos + 11));
-        tmp._ErrorPage = server.substr((key_pos + 11), scolon_pos - (key_pos + 11));
+        while (1)
+        {
+            if (key_pos >= 0)
+            {
+                scolon_pos = server.find(";", (key_pos + 11));
+                tmp_str = server.substr((key_pos + 11), scolon_pos - (key_pos + 11));
+                tmp.ParseErrorPage(tmp_str);
+            }
+            else
+                break;
+            key_pos = server.find("error_page ", key_pos + 1);
+        }
     }
     /*----------------------------------- end of error page -----------------------------------*/
 
@@ -224,6 +279,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
         tmp_str = location.substr((key_pos + 10), value_pos - (key_pos + 10));
         if (tmp_str.find("on") >= 0)
             location_tmp._AutoIndex = 1;
+        tmp_str.erase();
     }
     else
         InvalidConfigFile("Invalid config file : auto index not found.");
@@ -250,21 +306,47 @@ void    ServerConfig::ParseServerLocation(std::string location)
         tmp_str = location.substr((key_pos + 4), value_pos - (key_pos + 4));
         location_tmp._CgiInfo.type = tmp_str.substr(0, tmp_str.find(" ", 1));
         location_tmp._CgiInfo.path = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
+        tmp_str.erase();
     }
     /*----------------------------------- end of find cgi -----------------------------------*/
+
+    /*------------------------------------- find redirection -----------------------------------------*/
+    key_pos = location.find("return ");
+    if (key_pos >= 0)
+    {
+        location_tmp._RedirectionInfo.RedirectionFlag = TRUE;
+        value_pos = location.find(";", key_pos + 1);
+        tmp_str = location.substr((key_pos + 7), value_pos - (key_pos + 7));
+        location_tmp._RedirectionInfo.RedirectionCode = tmp_str.substr(0, tmp_str.find(" ", 1));
+        location_tmp._RedirectionInfo.RedirectionPath = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
+        tmp_str.erase();
+    }
+    /*----------------------------------- end of find redirection -----------------------------------*/
     this->_LocationsVec.push_back(location_tmp);
 }
 
 void    GlobalConfig::PrintServerConfig(unsigned int index)
 {
     if (index <= (_ServerCount - 1)) {
-        std::cout << "server index              : " << index << "\n";
-        std::cout << "host                      : " << _ServersConfigVec[index].GetHost() << "\n";
-        std::cout << "server post               : " << _ServersConfigVec[index].GetPort() << "\n";
-        if (_ServersConfigVec[index].GetServerName() != "n/a")
-            std::cout << "server name               : " << _ServersConfigVec[index].GetServerName() << "\n";
-        std::cout << "server client body size   : " << _ServersConfigVec[index].GetClientBodySize() << "\n";
-        std::cout << "\nserver location(s)\n\n";
+        std::cout << "Server index              : " << index << "\n";
+        std::cout << "Server host               : " << _ServersConfigVec[index].GetHost() << "\n";
+        std::cout << "Server port               : " << _ServersConfigVec[index].GetPort() << "\n";
+        if (_ServersConfigVec[index].GetServerNames() != "n/a")
+            std::cout << "Server name               : " << _ServersConfigVec[index].GetServerNames() << "\n";
+        std::cout << "Server client body size   : " << _ServersConfigVec[index].GetClientBodySize() << "\n";
+
+        // if (GetErrorPageMap().empty() == FALSE)
+        // {
+        //     std::map<std::string, std::string>::iterator it;
+
+        //     std::cout << "\nServer error page(s)      : " << "\n";
+        //     for (it = _ErrorPageMap.begin(); it != _ErrorPageMap.end(); ++it)
+        //     {
+        //         std::cout << "Error code        : " << it->first << "\n";
+        //         std::cout << "Error page path   : " << it->second << "\n";
+        //     }
+        // }
+        std::cout << "\nServer location(s)\n\n";
         for (unsigned long i = 0; i < _ServersConfigVec[index].GetLocationsVec().size(); i++) {
             _ServersConfigVec[index].PrintServerLocation(i);
             std::cout << "\n";
@@ -276,29 +358,40 @@ void    GlobalConfig::PrintServerConfig(unsigned int index)
  {
      if (index <= _LocationsVec.size())
      {
-         std::cout << "location index            : " << index << "\n";
-         std::cout << "location path             : " << _LocationsVec[index].GetLocationPath() << "\n";
-         std::cout << "location root             : " << _LocationsVec[index].GetRoot() << "\n";
-         std::cout << "location auto index       : " ;
-         if (_LocationsVec[index].GetAutoIndex() == 0)
-             std::cout << "OFF";
-         else
-             std::cout << "OFF";
-         std::cout << "\n";
-         if (_LocationsVec[index].GetCgiInfo().type != "n/a")
-         {
-             std::cout << "location cgi type         : " << _LocationsVec[index].GetCgiInfo().type << "\n";
-             std::cout << "location cgi path         : " << _LocationsVec[index].GetCgiInfo().path << "\n";
-         }
-         if (_LocationsVec[index].GetUpload() != "n/a")
-             std::cout << "server _Upload         : " << _LocationsVec[index].GetUpload() << "\n";
-         if (_LocationsVec[index].GetAllowedMethodsVec().size() > 0)
-         {
-             std::cout << "location allowed methods  : " ;
-             for (unsigned int i = 0; i < _LocationsVec[index].GetAllowedMethodsVec().size(); i++)
-                 std::cout << _LocationsVec[index].GetAllowedMethodsVec()[i] << " ";
-         }
-         std::cout << "\n";
+        std::cout << "Location index            : " << index << "\n";
+        std::cout << "Location path             : " << _LocationsVec[index].GetLocationPath() << "\n";
+        std::cout << "Location root             : " << _LocationsVec[index].GetRoot() << "\n";
+        std::cout << "Location auto index       : " ;
+        if (_LocationsVec[index].GetAutoIndex() == 0)
+            std::cout << "OFF";
+        else
+            std::cout << "OFF";
+        std::cout << "\n";
+
+        if (_LocationsVec[index].GetCgiInfo().type != "n/a")
+        {
+            std::cout << "Location cgi type         : " << _LocationsVec[index].GetCgiInfo().type << "\n";
+            std::cout << "Location cgi path         : " << _LocationsVec[index].GetCgiInfo().path << "\n";
+        }
+
+        if (_LocationsVec[index].GetUpload() != "n/a")
+            std::cout << "server _Upload         : " << _LocationsVec[index].GetUpload() << "\n";
+        
+        if (_LocationsVec[index].GetAllowedMethodsVec().size() > 0)
+        {
+            std::cout << "Location allowed methods  : " ;
+            for (unsigned int i = 0; i < _LocationsVec[index].GetAllowedMethodsVec().size(); i++)
+                std::cout << _LocationsVec[index].GetAllowedMethodsVec()[i] << " ";
+        }
+
+        std::cout << "\n";
+        
+        if (_LocationsVec[index].GetRedirectionInfo().RedirectionFlag == TRUE)
+        {
+            std::cout << "Redirection code          : " << _LocationsVec[index].GetRedirectionInfo().RedirectionCode << "\n";
+            std::cout << "Redirection path          : " << _LocationsVec[index].GetRedirectionInfo().RedirectionPath << "\n";
+        }
+        std::cout << "\n";
      }
  }
 
@@ -310,19 +403,19 @@ void    GlobalConfig::PrintServers(void)
 
 // --------------------- ACCESSOR ----------------
 
-unsigned int GlobalConfig::GetServerCount(void)
-{
-    return (_ServerCount);
-}
-
 std::vector<ServerConfig>& GlobalConfig::GetServersVector(void)
 {
     return (_ServersConfigVec);
 }
 
-unsigned int                    ServerConfig::GetPort(void)
+unsigned int GlobalConfig::GetServerCount(void)
 {
-    return _Port;    
+    return (_ServerCount);
+}
+
+unsigned int ServerConfig::GetPort(void)
+{
+    return (_Port);    
 }
 
 int                    ServerConfig::getClientSocket(void)
@@ -330,63 +423,88 @@ int                    ServerConfig::getClientSocket(void)
     return this->_clientSocket;    
 }
 
-std::string                     ServerConfig::GetHost(void)
+std::string ServerConfig::GetHost(void)
 {
-    return _Host;
+    return (_Host);
 }
 
-std::string                     ServerConfig::GetServerName(void)
+std::string ServerConfig::GetServerNames(void)
 {
-    return _ServerName;
+    return (_ServerNames);
 }
 
-std::string                     ServerConfig::GetClientBodySize(void)
+std::string ServerConfig::GetClientBodySize(void)
 {
-    return _ClientBodySize;
-}
-std::string                     ServerConfig::GetErrorPage(void)
-{
-    return  _ErrorPage;
+    return (_ClientBodySize);
 }
 
-std::vector<ServerLocation>&    ServerConfig::GetLocationsVec(void)
+std::vector<ServerLocation>& ServerConfig::GetLocationsVec(void)
 {
-    return  _LocationsVec;
+    return  (_LocationsVec);
 }
 
 int ServerLocation::GetAutoIndex(void)
 {
-    return _AutoIndex;
+    return (_AutoIndex);
 }
 
 cgi& ServerLocation::GetCgiInfo(void)
 {
-    return _CgiInfo;
+    return (_CgiInfo);
 }
 
 std::string ServerLocation::GetLocationPath(void)
 {
-    return _LocationPath;
+    return (_LocationPath);
 }
 
 std::string ServerLocation::GetRoot(void)
 {
-    return _Root;
+    return (_Root);
 }
 
 std::string ServerLocation::GetUpload(void)
 {
-    return _Upload;
+    return (_Upload);
 }
 
 std::vector<std::string> ServerLocation::GetAllowedMethodsVec(void)
 {
-    return _AllowedMethodsVec;
+    return (_AllowedMethodsVec);
 }
 
+void    ServerConfig::SetServerSocket(int socket)
+{
+    //Do not forget to check for errors
+    _ServerSocket = socket;
+}
 
+int ServerConfig::GetServerSocket(void)
+{
+    return (_ServerSocket);
+}
+
+redirection&    ServerLocation::GetRedirectionInfo(void)
+{
+    return (_RedirectionInfo);
+}
 
 void ServerConfig::setClientSocket(int n)
 {
     this->_clientSocket = n;  
+}
+
+void ServerConfig::ParseErrorPage(std::string error_directive)
+{
+    
+    std::stringstream ss(error_directive);
+    std::istream_iterator<std::string> begin(ss);
+    std::istream_iterator<std::string> end;
+    std::vector<std::string> SplitedStringsVec(begin, end);
+    this->_ErrorPageMap[SplitedStringsVec[0]] = SplitedStringsVec[1];
+}
+
+std::map<std::string, std::string>& ServerConfig::GetErrorPageMap(void)
+{
+    return _ErrorPageMap;
 }
