@@ -1,9 +1,53 @@
 #include "../includes/Config.hpp"
 
-void    InvalidConfigFile(std::string err_message)
+//ServerLocation OCF
+ServerLocation::ServerLocation()
 {
-    std::cout << err_message << std::endl;
-    exit(1);
+    _RedirectionInfo.RedirectionFlag = FALSE;
+    _RedirectionInfo.RedirectionCode = "n/a";
+    _RedirectionInfo.RedirectionPath = "n/a";
+
+    _CgiInfo.type = "n/a";
+    _CgiInfo.path = "n/a";
+
+    _LocationPath = "n/a";
+    _AutoIndex = FALSE;
+    _Root = "n/a";
+    _Upload = "n/a";   
+}
+
+ServerLocation::ServerLocation(const ServerLocation & ServerObj)
+{
+    *this = ServerObj;
+}
+
+ServerLocation & ServerLocation::operator = (const ServerLocation & ServerObj)
+{
+    this->_AutoIndex = ServerObj._AutoIndex;
+    this->_CgiInfo.path = ServerObj._CgiInfo.path;
+    this->_CgiInfo.type = ServerObj._CgiInfo.type;
+    this->_RedirectionInfo.RedirectionFlag = ServerObj._RedirectionInfo.RedirectionFlag;
+    this->_RedirectionInfo.RedirectionCode = ServerObj._RedirectionInfo.RedirectionCode;
+    this->_RedirectionInfo.RedirectionPath = ServerObj._RedirectionInfo.RedirectionPath;
+    this->_LocationPath = ServerObj._LocationPath;
+    this->_Root = ServerObj._Root;
+    this->_Upload = ServerObj._Upload;
+    this->_AllowedMethodsVec = ServerObj._AllowedMethodsVec;
+    return *this;
+}
+
+ServerLocation::~ServerLocation()
+{
+    
+}
+//ServerLocation OCF end
+
+//ServerConfig OCF
+ServerConfig::ServerConfig()
+{
+    _Port = 8080;
+    _Host = "n/a";
+    _ClientBodySize = "n/a";
 }
 
 ServerConfig::ServerConfig(const ServerConfig & ServerObj)
@@ -24,61 +68,46 @@ ServerConfig & ServerConfig::operator = (const ServerConfig & ServerObj)
     return *this;
 }
 
-// GlobalConfig::GlobalConfig(const GlobalConfig & ServerObj)
-// {
-//     *this = ServerObj;
-// }
-
-// GlobalConfig & GlobalConfig::operator = (const GlobalConfig & ServerObj)
-// {
-//     std::map<std::string , std::string>::const_iterator it;
-//     return *this;
-// }
-
-ServerLocation::ServerLocation()
-{
-    //all ints shall be intialised by 0
-    //and all strings by n/a 'not applicable'
-
-    _RedirectionInfo.RedirectionFlag = FALSE;
-    _RedirectionInfo.RedirectionCode = "n/a";
-    _RedirectionInfo.RedirectionPath = "n/a";
-
-    _CgiInfo.type = "n/a";
-    _CgiInfo.path = "n/a";
-
-    _LocationPath = "n/a";
-    _AutoIndex = FALSE;
-    _Root = "n/a";
-    _Upload = "n/a";   
-}
-
-ServerLocation::~ServerLocation()
-{
-    //ConfigLocation destructor
-}
-
-ServerConfig::ServerConfig()
-{
-    _Port = 8080;
-    _Host = "n/a";
-    _ClientBodySize = "n/a";
-}
-
 ServerConfig::~ServerConfig()
 {
 
 }
+//ServerConfig OCF end
 
+//GlobalConfig OCF
 GlobalConfig::GlobalConfig()
 {
     _ServerCount = 0;
 }
 
+GlobalConfig::GlobalConfig(const GlobalConfig & ServerObj)
+{
+    *this = ServerObj;
+}
+
+GlobalConfig & GlobalConfig::operator = (const GlobalConfig & ServerObj)
+{
+    this->_ServerCount = ServerObj._ServerCount;
+    this->_ServersConfigVec = ServerObj._ServersConfigVec;
+    return *this;
+}
+
+GlobalConfig::~GlobalConfig()
+{
+    
+}
+//GlobalConfig OCF end
+
+void    InvalidConfigFile(std::string err_message)
+{
+    std::cout << err_message << std::endl;
+    exit(1);
+}
+
 void GlobalConfig::ParseConfigFile(char *av)
 {
     //int           error_code;
-    int             dot_position = 0, oc = 0, soc = 0; //oc: ocurence of somethings, soc: "server" substring occurence in string
+    int             dot_position = 0, oc = 0, soc = 0; //oc: occurrence of some things, soc: "server" substring occurrence in string
     std::string     buffer, read_data, file_name(av), server;
     std::ifstream   config_file;
     
@@ -87,8 +116,7 @@ void GlobalConfig::ParseConfigFile(char *av)
     if (dot_position > 0)
     {
         if (file_name.substr(dot_position ,file_name.length()) != ".conf")
-            InvalidConfigFile("Invalid config file: wrong extention.");
-
+            InvalidConfigFile("Invalid config file: wrong extension.");
     }
     else
         InvalidConfigFile("Invalid config file: wrong extension.");
@@ -123,11 +151,13 @@ void GlobalConfig::ParseConfigFile(char *av)
                 soc = read_data.find("server ", oc + 1);
                 ParseServerConfig(server);
             }
-            if (soc < 0 || oc < 0) // if soc < 0 that means there's only one server
+            if (soc < 0 || oc < 0 || oc == 0) // if soc < 0 that means there's only one server
             {
                 if (soc > 0)
                     server = read_data.substr(soc, read_data.length());
                 else if (oc > 0)
+                    server = read_data.substr(oc, read_data.length());
+                else if (oc == 0)
                     server = read_data.substr(oc, read_data.length());
                 ParseServerConfig(server);//call to this f() to parse each server individually
                 break;
@@ -145,14 +175,44 @@ void    GlobalConfig::ParseServerConfig(std::string server)
     std::string location, tmp_str;
     ServerConfig tmp;
 
+    /*------------------------------- Error check for server string end -----------------------------------*/
+    for (unsigned int i = server.length() - 1; i > 0; i--)
+    {
+        if (server[i] == '}' || server[i] == '\n')
+        {
+            if (server[i] == '}')
+            {
+                if (server[i - 1] == '\n')
+                {
+                    if (server[i - 2] == '}')
+                        break;
+                    else
+                        InvalidConfigFile("Invalid config file : invalid server closing, closing brace should be proceeded by last location closing brace");
+                }
+                else
+                    InvalidConfigFile("Invalid config file : invalid server closing, closing brace should be proceeded by last location closing brace");
+            }
+            else
+                continue;
+        }
+        else
+            InvalidConfigFile("Invalid config file : invalid server closing");
+    }
+    /*---------------------------------------- Error check end --------------------------------------------*/
+
+
     _ServerCount++;
     /*------------------------------- host and port -----------------------------------*/
     key_pos = server.find("listen ");
     if (key_pos >= 0)
     {
         colon_pos = server.find(":", key_pos);
+        if (colon_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         tmp._Host = server.substr(key_pos + 7, (colon_pos - (key_pos + 7)));
         value_pos = server.find(";", colon_pos);
+        if (value_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         tmp._Port = std::atoi(server.substr(colon_pos + 1, (((value_pos - colon_pos) - 1))).c_str());
     }
     else
@@ -164,6 +224,8 @@ void    GlobalConfig::ParseServerConfig(std::string server)
     if (key_pos > 0)
     {
         scolon_pos = server.find(";", (key_pos + 13));
+        if (scolon_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         tmp._ServerNames = server.substr((key_pos + 13), scolon_pos - (key_pos + 13));
         value_pos = tmp._ServerNames.find(" ");
         if (value_pos != -1)
@@ -187,6 +249,8 @@ void    GlobalConfig::ParseServerConfig(std::string server)
     if (key_pos >= 0)
     {
         scolon_pos = server.find(";", (key_pos + 17));
+        if (scolon_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         tmp._ClientBodySize = server.substr((key_pos + 17), scolon_pos - (key_pos + 17));
     }
     else
@@ -202,12 +266,15 @@ void    GlobalConfig::ParseServerConfig(std::string server)
             if (key_pos >= 0)
             {
                 scolon_pos = server.find(";", (key_pos + 11));
+                if (scolon_pos < 0)
+                    InvalidConfigFile("Invalid config file : There was an error.");
                 tmp_str = server.substr((key_pos + 11), scolon_pos - (key_pos + 11));
                 tmp.ParseErrorPage(tmp_str);
             }
             else
                 break;
             key_pos = server.find("error_page ", key_pos + 1);
+
         }
     }
     /*----------------------------------- end of error page -----------------------------------*/
@@ -222,6 +289,8 @@ void    GlobalConfig::ParseServerConfig(std::string server)
             if (key_pos >= 0)
             {
                 value_pos = server.find("}", key_pos);
+                if (value_pos < 0)
+                    InvalidConfigFile("Invalid config file : There was an error.");
                 location = server.substr(key_pos, (value_pos - key_pos) + 1);
                 tmp.ParseServerLocation(location);
             }
@@ -245,7 +314,11 @@ void    ServerConfig::ParseServerLocation(std::string location)
 
     /*------------------------------------- find location path -------------------------------------*/
     key_pos = location.find("location ");
+    if (key_pos < 0)
+        InvalidConfigFile("Invalid config file : There was an error.");
     value_pos = location.find("{", key_pos + 1);
+    if (value_pos < 0)
+        InvalidConfigFile("Invalid config file : There was an error.");
     location_tmp._LocationPath = location.substr((key_pos + 9), value_pos - (key_pos + 10));
     /*----------------------------------- end find location path -----------------------------------*/
 
@@ -254,6 +327,8 @@ void    ServerConfig::ParseServerLocation(std::string location)
     if (key_pos > 0)
     {
         value_pos = location.find(";", key_pos + 1);
+        if (value_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         tmp_str = location.substr((key_pos + 14), value_pos - (key_pos + 14));
 
         npos = tmp_str.find("GET");
@@ -276,6 +351,8 @@ void    ServerConfig::ParseServerLocation(std::string location)
     if (key_pos > 0)
     {
         value_pos = location.find(";", key_pos + 1);
+        if (value_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         tmp_str = location.substr((key_pos + 10), value_pos - (key_pos + 10));
         if (tmp_str.find("on") >= 0)
             location_tmp._AutoIndex = 1;
@@ -290,6 +367,8 @@ void    ServerConfig::ParseServerLocation(std::string location)
     if (key_pos >= 0)
     {
         value_pos = location.find(";", key_pos + 1);
+        if (value_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         location_tmp._Root = location.substr((key_pos + 5), value_pos - (key_pos + 5));
     }
     else
@@ -299,10 +378,11 @@ void    ServerConfig::ParseServerLocation(std::string location)
     
    /*------------------------------------- find cgi -----------------------------------------*/
     key_pos = location.find("cgi ");
-
     if (key_pos >= 0)
     {
         value_pos = location.find(";", key_pos + 1);
+        if (value_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         tmp_str = location.substr((key_pos + 4), value_pos - (key_pos + 4));
         location_tmp._CgiInfo.type = tmp_str.substr(0, tmp_str.find(" ", 1));
         location_tmp._CgiInfo.path = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
@@ -316,6 +396,8 @@ void    ServerConfig::ParseServerLocation(std::string location)
     {
         location_tmp._RedirectionInfo.RedirectionFlag = TRUE;
         value_pos = location.find(";", key_pos + 1);
+        if (value_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         tmp_str = location.substr((key_pos + 7), value_pos - (key_pos + 7));
         location_tmp._RedirectionInfo.RedirectionCode = tmp_str.substr(0, tmp_str.find(" ", 1));
         location_tmp._RedirectionInfo.RedirectionPath = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
@@ -335,17 +417,18 @@ void    GlobalConfig::PrintServerConfig(unsigned int index)
             std::cout << "Server name               : " << _ServersConfigVec[index].GetServerNames() << "\n";
         std::cout << "Server client body size   : " << _ServersConfigVec[index].GetClientBodySize() << "\n";
 
-        // if (GetErrorPageMap().empty() == FALSE)
-        // {
-        //     std::map<std::string, std::string>::iterator it;
+         if (_ServersConfigVec[index].GetErrorPageMap().empty() == FALSE)
+         {
+             std::map<std::string, std::string>::iterator it;
 
-        //     std::cout << "\nServer error page(s)      : " << "\n";
-        //     for (it = _ErrorPageMap.begin(); it != _ErrorPageMap.end(); ++it)
-        //     {
-        //         std::cout << "Error code        : " << it->first << "\n";
-        //         std::cout << "Error page path   : " << it->second << "\n";
-        //     }
-        // }
+             std::cout << "\nServer error page(s)      : " << "\n";
+             for (it = _ServersConfigVec[index].GetErrorPageMap().begin(); it != _ServersConfigVec[index].GetErrorPageMap().end(); ++it)
+             {
+                 std::cout << "Error code        : " << it->first << "\n";
+                 std::cout << "Error page path   : " << it->second << "\n";
+             }
+         }
+    
         std::cout << "\nServer location(s)\n\n";
         for (unsigned long i = 0; i < _ServersConfigVec[index].GetLocationsVec().size(); i++) {
             _ServersConfigVec[index].PrintServerLocation(i);
@@ -401,6 +484,20 @@ void    GlobalConfig::PrintServers(void)
         PrintServerConfig(i);
 }
 
+void ServerConfig::ParseErrorPage(std::string error_directive)
+{
+
+    std::stringstream ss(error_directive);
+    std::istream_iterator<std::string> begin(ss);
+    std::istream_iterator<std::string> end;
+    std::vector<std::string> SplitedStringsVec(begin, end);
+
+    if (SplitedStringsVec.empty() != 1)
+        this->_ErrorPageMap[SplitedStringsVec[0]] = SplitedStringsVec[1];
+    else
+        InvalidConfigFile("Invalid config file : There was an error.");
+}
+
 // --------------------- ACCESSOR ----------------
 
 std::vector<ServerConfig>& GlobalConfig::GetServersVector(void)
@@ -415,12 +512,12 @@ unsigned int GlobalConfig::GetServerCount(void)
 
 unsigned int ServerConfig::GetPort(void)
 {
-    return (_Port);    
+    return (_Port);
 }
 
 int                    ServerConfig::getClientSocket(void)
 {
-    return this->_clientSocket;    
+    return this->_clientSocket;
 }
 
 std::string ServerConfig::GetHost(void)
@@ -491,20 +588,10 @@ redirection&    ServerLocation::GetRedirectionInfo(void)
 
 void ServerConfig::setClientSocket(int n)
 {
-    this->_clientSocket = n;  
-}
-
-void ServerConfig::ParseErrorPage(std::string error_directive)
-{
-    
-    std::stringstream ss(error_directive);
-    std::istream_iterator<std::string> begin(ss);
-    std::istream_iterator<std::string> end;
-    std::vector<std::string> SplitedStringsVec(begin, end);
-    this->_ErrorPageMap[SplitedStringsVec[0]] = SplitedStringsVec[1];
+    this->_clientSocket = n;
 }
 
 std::map<std::string, std::string>& ServerConfig::GetErrorPageMap(void)
 {
-    return _ErrorPageMap;
+    return (_ErrorPageMap);
 }
