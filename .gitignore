@@ -6,3 +6,6 @@ Server
 upload
 Makefile
 Server.dSYM
+.idea
+.vscode
+.DS_Store
