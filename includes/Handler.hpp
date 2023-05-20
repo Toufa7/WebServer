@@ -42,7 +42,9 @@ class Handler
 		bool 	validateURI(const std::string& uri);
 		void	printRequstData();
 		void    fileResponse(std::string path, std::string statusCode);
-		void 	errorResponse(std::string statusCode);
+		void 	codeResponse(std::string statusCode);
+		void	redirectionResponse(std::string statusCode, std::string location);
+		std::string generatePageCode(std::string statusCode);
 
 
 };
