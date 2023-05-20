@@ -3,4 +3,5 @@ Server
 *.o
 */*.o
 .vscode
+.idea
 upload
