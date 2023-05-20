@@ -106,7 +106,6 @@ void    InvalidConfigFile(std::string err_message)
 
 void GlobalConfig::ParseConfigFile(char *av)
 {
-    //int           error_code;
     int             dot_position = 0, oc = 0, soc = 0; //oc: occurrence of some things, soc: "server" substring occurrence in string
     std::string     buffer, read_data, file_name(av), server;
     std::ifstream   config_file;
@@ -133,22 +132,22 @@ void GlobalConfig::ParseConfigFile(char *av)
 
 
     /*----------------------------------- Extracting each "server" ----------------------------------*/
-    oc = read_data.find("server ");
+    oc = read_data.find("server {");
     if (oc >= 0)
     {
         while (oc >= 0)
         {
-            soc = read_data.find("server ", oc + 1);
+            soc = read_data.find("server {", oc + 1);
             if (soc > oc)//since oc is already bigger than 0,so for soc to be after oc, it should be be bigger
             {
                 server = read_data.substr(oc, soc - oc);
-                oc = read_data.find("server ", soc + 1);
+                oc = read_data.find("server {", soc + 1);
                 ParseServerConfig(server);
             }
             if (soc < oc && soc > 0)
             {
                 server = read_data.substr(soc, oc - soc);
-                soc = read_data.find("server ", oc + 1);
+                soc = read_data.find("server {", oc + 1);
                 ParseServerConfig(server);
             }
             if (soc < 0 || oc < 0 || oc == 0) // if soc < 0 that means there's only one server
@@ -214,6 +213,8 @@ void    GlobalConfig::ParseServerConfig(std::string server)
         if (value_pos < 0)
             InvalidConfigFile("Invalid config file : There was an error.");
         tmp._Port = std::atoi(server.substr(colon_pos + 1, (((value_pos - colon_pos) - 1))).c_str());
+        if (tmp._Port < 0 || tmp._Port > 65536)
+            InvalidConfigFile("Invalid config file : Wrong port number");
     }
     else
         InvalidConfigFile("Invalid config file : listen directive is not found.");
@@ -308,7 +309,7 @@ void    GlobalConfig::ParseServerConfig(std::string server)
 
 void    ServerConfig::ParseServerLocation(std::string location)
 {
-    int key_pos, value_pos, npos;
+    int key_pos, value_pos, npos = 0;
     ServerConfig location_tmp;
     std::string tmp_str;
 
@@ -384,7 +385,13 @@ void    ServerConfig::ParseServerLocation(std::string location)
         if (value_pos < 0)
             InvalidConfigFile("Invalid config file : There was an error.");
         tmp_str = location.substr((key_pos + 4), value_pos - (key_pos + 4));
-        location_tmp._CgiInfo.type = tmp_str.substr(0, tmp_str.find(" ", 1));
+        npos = tmp_str.find(" ", 1);
+        if (npos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
+        location_tmp._CgiInfo.type = tmp_str.substr(0, npos);
+        npos = tmp_str.find(" ");
+        if (npos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
         location_tmp._CgiInfo.path = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
         tmp_str.erase();
     }
@@ -399,8 +406,11 @@ void    ServerConfig::ParseServerLocation(std::string location)
         if (value_pos < 0)
             InvalidConfigFile("Invalid config file : There was an error.");
         tmp_str = location.substr((key_pos + 7), value_pos - (key_pos + 7));
-        location_tmp._RedirectionInfo.RedirectionCode = tmp_str.substr(0, tmp_str.find(" ", 1));
-        location_tmp._RedirectionInfo.RedirectionPath = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
+        npos = tmp_str.find(" ", 1);
+        if (npos < 0)
+            InvalidConfigFile("Invalid config file : There was an error.");
+        location_tmp._RedirectionInfo.RedirectionCode = tmp_str.substr(0, npos);
+        location_tmp._RedirectionInfo.RedirectionPath = tmp_str.substr(npos + 1, value_pos - (npos + 1));
         tmp_str.erase();
     }
     /*----------------------------------- end of find redirection -----------------------------------*/
