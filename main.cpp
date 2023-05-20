@@ -10,7 +10,7 @@ int main(int ac, char **av)
     if (ac == 2)
     {
         configuration.ParseConfigFile(av[1]);
-        //configuration.PrintServers();
+        configuration.PrintServers();
         Server          WebServer(configuration.GetServersVector()[0]);
         WebServer.Start();
     }

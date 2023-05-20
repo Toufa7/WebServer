@@ -35,7 +35,7 @@ void Handler::printRequstData()
 	}
 }
 
-std::string Handler::generateErrorPage(std::string statusCode)
+std::string Handler::generatePageCode(std::string statusCode)
 {
 	std::ifstream file("smaples/errorPageSample.html");
 	std::string statusMessage = this->_shared.status_codes[statusCode];
@@ -53,7 +53,7 @@ std::string Handler::generateErrorPage(std::string statusCode)
 	return res;
 }
 
-void Handler::errorResponse(std::string statusCode)
+void Handler::codeResponse(std::string statusCode)
 {
 	std::stringstream response;
 	std::string htmlContent;
@@ -70,10 +70,10 @@ void Handler::errorResponse(std::string statusCode)
 			file.close();
 		}
 		else
-			htmlContent = this->generateErrorPage(statusCode);
+			htmlContent = this->generatePageCode(statusCode);
 	}
 	else
-		htmlContent = this->generateErrorPage(statusCode);
+		htmlContent = this->generatePageCode(statusCode);
 
 	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
 	response << "Server: " << this->_config.GetServerNames() << "\r\n";
@@ -92,6 +92,25 @@ void Handler::errorResponse(std::string statusCode)
 	std::cout << response.str() << std::endl;
 }
 
+void	Handler::redirectionResponse(std::string statusCode, std::string location)
+{
+	std::stringstream response;
+
+	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
+	response << "Location: " << location << "\r\n";
+	response << "Server: " << this->_config.GetServerNames() << "\r\n";
+	response << "Connection: close\r\n";
+	response << "\r\n";
+
+	if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+	{
+		std::cerr << "Error : Sending failed\n";
+		exit(1);
+	}
+	std::cout << "\n---------------------- redirection response --------------------- " << std::endl;
+	std::cout << response.str() << std::endl;
+}
+
 void Handler::fileResponse(std::string path, std::string statusCode)
 {
 	std::stringstream response;
@@ -100,7 +119,7 @@ void Handler::fileResponse(std::string path, std::string statusCode)
 
 	if (!file)
 	{
-		errorResponse("500");
+		codeResponse("500");
 		return;
 	}
 	body << file.rdbuf();
@@ -164,10 +183,11 @@ void Handler::ParseRequestHeader(char *req)
 		value = current_line.substr(delimiter_position + 2, current_line.length()); // [delimiter_position + 2] to remove the extra space before value
 		this->_req_header[key] = value;												// storing key and value in map
 	}
+	printRequstData();
 	// Validate request content
 	if (!this->validateRequest())
 		return;
-	printRequstData();
+	
 	if (this->_method == "GET")
 		this->HandleGet();
 	else if (this->_method == "POST")
@@ -182,33 +202,33 @@ bool Handler::validateRequest()
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
 	{
-		this->errorResponse("501");
+		this->codeResponse("501");
 		return false;
 	}
 	// if both Transfer-Encoding and Content-Length not provided
 	if (this->_method == "POST" && this->_req_header.find("Transfer-Encoding") == this->_req_header.end() &&
 		this->_req_header.find("Content-Length") == this->_req_header.end())
 	{
-		this->errorResponse("400");
+		this->codeResponse("400");
 		return false;
 	}
 	// URI should start with a leading slash ("/") and not contain any illegal characters
 	if (!this->validateURI(this->_uri))
 	{
-		this->errorResponse("400");
+		this->codeResponse("400");
 		return false;
 	}
 	//  URI should not have more than 2048
 	if (this->_uri.length() > 2048)
 	{
-		this->errorResponse("414");
+		this->codeResponse("414");
 		return false;
 	}
 	//  Request body size should not be more than [client_body_size] from confing file
 	if (this->_req_header.find("Content-Length") != this->_req_header.end() &&
 		std::stoll(this->_req_header["Content-Length"]) > std::stoll(this->_config.GetClientBodySize()))
 	{
-		this->errorResponse("413");
+		this->codeResponse("413");
 		return false;
 	}
 	return this->matchLocation();
@@ -230,10 +250,16 @@ bool Handler::matchLocation()
 	{
 		if (serverLocations[i].GetLocationPath() == path)
 		{
+			if (serverLocations[i].GetRedirectionInfo().RedirectionFlag)
+			{
+				std::string path = serverLocations[i].GetRedirectionInfo().RedirectionPath;
+				this->redirectionResponse(serverLocations[i].GetRedirectionInfo().RedirectionCode, path);
+				return false;
+			}
 			std::vector<std::string> allowedMethods = serverLocations[i].GetAllowedMethodsVec();
 			if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
 			{
-				this->errorResponse("405");
+				this->codeResponse("405");
 				return false;
 			}
 			// Check for location redirection
@@ -242,7 +268,7 @@ bool Handler::matchLocation()
 	}
 	if (i == serverLocations.size())
 	{
-		this->errorResponse("404");
+		this->codeResponse("404");
 		return false;
 	}
 	return true;
