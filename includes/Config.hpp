@@ -40,6 +40,8 @@ class ServerLocation
     public:
         ServerLocation();
         ~ServerLocation();
+        ServerLocation(const ServerLocation & ServerObj);
+        ServerLocation & operator = (const ServerLocation & ServerObj);
         int                         GetAutoIndex(void);
         cgi&                        GetCgiInfo(void);
         redirection&                GetRedirectionInfo(void);
@@ -62,6 +64,8 @@ class ServerConfig : public ServerLocation
         std::map<std::string, std::string>  _ErrorPageMap;
         ServerConfig();
         ~ServerConfig();
+        ServerConfig(const ServerConfig & ServerObj);
+        ServerConfig & operator = (const ServerConfig & ServerObj);
         int                                 GetServerSocket(void);
         int                                 getClientSocket(void);
         unsigned int                        GetPort(void);
@@ -74,8 +78,6 @@ class ServerConfig : public ServerLocation
         void                                setClientSocket(int n);
         std::vector<ServerLocation>&        GetLocationsVec(void);
         std::map<std::string, std::string>& GetErrorPageMap(void);
-        ServerConfig(const ServerConfig & ServerObj);
-        ServerConfig & operator = (const ServerConfig & ServerObj);
         void            ParseErrorPage(std::string error_directive);
 };
 
@@ -88,11 +90,11 @@ class GlobalConfig
         GlobalConfig();
         GlobalConfig(const GlobalConfig & ServerObj);
         GlobalConfig & operator = (const GlobalConfig & ServerObj);
+        ~GlobalConfig();
         void            ParseConfigFile(char *av);
         void            ParseServerConfig(std::string server);
         void            PrintServerConfig(unsigned int index);
         void            PrintServers(void);
-        std::string     GetErrorPage(void);
         unsigned int    GetServerCount(void);
         std::vector<ServerConfig>& GetServersVector(void);
 };

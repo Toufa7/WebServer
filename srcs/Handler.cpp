@@ -2,7 +2,6 @@
 
 //  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
 
-
 //  ------------- ACCESSOR --------------------
 
 // Request method getter
@@ -17,7 +16,8 @@ std::string Handler::GetRequestURI()
 	return (this->_uri);
 }
 
-void Handler::setConfig(ServerConfig &config) {
+void Handler::setConfig(ServerConfig &config)
+{
 	this->_config = config;
 }
 
@@ -35,74 +35,89 @@ void Handler::printRequstData()
 	}
 }
 
+std::string Handler::generateErrorPage(std::string statusCode)
+{
+	std::ifstream file("smaples/errorPageSample.html");
+	std::string statusMessage = this->_shared.status_codes[statusCode];
+	std::string res = "<html><head><title>" + statusCode + " " + statusMessage + "</title></head>"
+	"<body><h1>" + statusCode + " " + statusMessage + "</h1></body></html>";
+	std::stringstream buffer;
+	if (file)
+	{
+		buffer << file.rdbuf();
+		file.close();
+		res = buffer.str();
+		res.insert(res.find("<title><") + 7, statusCode + " - " + statusMessage);
+		res.insert(res.find("<h1><") + 4, statusCode + " - " + statusMessage);
+	}
+	return res;
+}
+
 void Handler::errorResponse(std::string statusCode)
 {
-    std::stringstream response;
-    std::string statusMessage = this->_shared.status_codes[statusCode];
-	std::string htmlContent = "<html><head><title>" + statusCode + " " + statusMessage + "</title></head>"
-                              "<body><h1>" + statusCode + " " + statusMessage + "</h1></body></html>";
-    // TODO: check for this error page in config first
-    response << "HTTP/1.1 " << statusCode << " " << statusMessage << "\r\n";
+	std::stringstream response;
+	std::string htmlContent;
+
+	// Check for this error page in the server config
+	if (this->_config._ErrorPageMap.find(statusCode) != this->_config._ErrorPageMap.end())
+	{
+		std::ifstream file(this->_config._ErrorPageMap[statusCode].c_str());
+		std::stringstream buffer;
+		if (file)
+		{
+			buffer << file.rdbuf();
+			htmlContent = buffer.str();
+			file.close();
+		}
+		else
+			htmlContent = this->generateErrorPage(statusCode);
+	}
+	else
+		htmlContent = this->generateErrorPage(statusCode);
+
+	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
 	response << "Server: " << this->_config.GetServerNames() << "\r\n";
-    response << "Content-Type: text/html\r\n";
+	response << "Content-Type: text/html\r\n";
 	response << "Content-Length: " << htmlContent.length() << "\r\n";
-    response << "Connection: close\r\n";
-    response << "\r\n";
+	response << "Connection: close\r\n";
+	response << "\r\n";
 	response << htmlContent;
 
-    if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
-    {   
-        std::cerr << "Error : Receiving failed\n";
-        exit(1);
-    }
+	if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+	{
+		std::cerr << "Error : Sending failed\n";
+		exit(1);
+	}
 	std::cout << "\n---------------------- error response --------------------- " << std::endl;
 	std::cout << response.str() << std::endl;
 }
 
-
-void    Handler::fileResponse(std::string path, std::string statusCode)
+void Handler::fileResponse(std::string path, std::string statusCode)
 {
 	std::stringstream response;
-	std::string statusMessage = this->_shared.status_codes[statusCode];
-    struct stat file_infos;
-    int         fd;
-    char        *response_body;
-    int         nbyte;
-    if ((fd = open(path.c_str(), O_RDONLY)) == -1)
-    {
-        std::cerr << "Error : Opening failed\n";
-        exit(1);
-    }
-    if (fstat(fd, &file_infos) == -1)
-    {
-        std::cerr << "Error : Failed to obtain informations\n";
-        exit(1);
-    }
-    response_body = new char[file_infos.st_size];
-    if ((nbyte = read(fd, response_body, file_infos.st_size)) == -1)
-    {
-        std::cerr << "Error : Reading failed\n";
-        exit(1);
-    }
-	response << "HTTP/1.1 " << statusCode << " " << statusMessage << "\r\n";
+	std::stringstream body;
+	std::ifstream file(path);
+
+	if (!file)
+	{
+		errorResponse("500");
+		return;
+	}
+	body << file.rdbuf();
+	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
 	response << "Server: " << this->_config.GetServerNames() << "\r\n";
-    response << "Content-Type: text/html\r\n";
-	response << "Content-Length: " << file_infos.st_size << "\r\n";
-    response << "Connection: close\r\n";
-    response << "\r\n";
-    if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
-    {   
-        std::cerr << "Error : Sending failed\n";
-        exit(1);
-    }
-	if (send(this->_config.getClientSocket(), response_body, nbyte, 0) == -1)
-    {   
-        std::cerr << "Error : Sending failed\n";
-        exit(1);
-    }
-	std::cout << "\n----------------------file response --------------------- " << std::endl;
+	response << "Content-Type: text/html\r\n";
+	response << "Content-Length: " << body.str().length() << "\r\n";
+	response << "Connection: close\r\n";
+	response << "\r\n";
+	response << body.str();
+	if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+	{
+		std::cerr << "Error : Sending failed\n";
+		exit(1);
+	}
+	std::cout << "\n---------------------- file response --------------------- " << std::endl;
 	std::cout << response.str() << std::endl;
-    delete [] response_body;
 }
 
 std::string Handler::GetMimeType()
@@ -190,7 +205,7 @@ bool Handler::validateRequest()
 		return false;
 	}
 	//  Request body size should not be more than [client_body_size] from confing file
-	if (this->_req_header.find("Content-Length") != this->_req_header.end() && 
+	if (this->_req_header.find("Content-Length") != this->_req_header.end() &&
 		std::stoll(this->_req_header["Content-Length"]) > std::stoll(this->_config.GetClientBodySize()))
 	{
 		this->errorResponse("413");
@@ -249,7 +264,7 @@ bool Handler::validateURI(const std::string &uri)
 
 void Handler::HandlePost(char *body)
 {
-	(void) body;
+	(void)body;
 	std::string encodingFormat, boundary;
 	std::string mimeType = "application/octet-stream"; // Default MIME type
 	// Save MIME type and boundary if it exist
@@ -265,7 +280,7 @@ void Handler::HandlePost(char *body)
 		else
 			mimeType = this->_req_header["Content-Type"];
 	}
-	// Save Transfer-Encoding if it exist. 
+	// Save Transfer-Encoding if it exist.
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
 		encodingFormat = this->_req_header["Transfer-Encoding"];
 	if (boundary.empty() && encodingFormat.empty())
@@ -293,10 +308,12 @@ void Handler::HandlePost(char *body)
 	fileResponse("test/homepage.html", "200");
 }
 
-void Handler::HandleGet() {
+void Handler::HandleGet()
+{
 	fileResponse("test/homepage.html", "200");
 }
 
-void Handler::HandleDelete() {
+void Handler::HandleDelete()
+{
 	fileResponse("test/homepage.html", "200");
 }

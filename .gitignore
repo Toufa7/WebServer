@@ -3,5 +3,8 @@ Server
 *.o
 */*.o
 .vscode
-.idea
 upload
+Makefile
+Server.dSYM
+.idea
+.DS_Store

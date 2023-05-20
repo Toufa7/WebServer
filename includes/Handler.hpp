@@ -43,6 +43,7 @@ class Handler
 		void	printRequstData();
 		void    fileResponse(std::string path, std::string statusCode);
 		void 	errorResponse(std::string statusCode);
+		std::string generateErrorPage(std::string statusCode);
 
 
 };

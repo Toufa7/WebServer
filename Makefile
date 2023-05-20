@@ -1,5 +1,6 @@
 NAME = Server
-CFLAGS = c++ -std=c++98 -Wall -Wextra -Werror -fsanitize=address -g
+CC = c++
+CFLAGS = -std=c++98 -Wall -Wextra -Werror -fsanitize=address -g
 
 FILES = main.cpp \
 	srcs/Server.cpp \
@@ -12,19 +13,15 @@ HEADERS = includes/Server.hpp \
 	includes/Shared.hpp \
 	includes/Config.hpp \
 	includes/Handler.hpp
-	
-OBJS = $(FILES:.cpp=.o)
+
 
 all : $(NAME)
 
-$(NAME): $(OBJS) $(HEADERS)
-		$(CFLAGS) $(OBJS) -o $(NAME)
-
-%.o: %.cpp
-	$(CFLAGS) -c $< -o $@
+$(NAME): $(FILES) $(HEADERS)
+		$(CC) $(CFLAGS) $(FILES) -o $(NAME)
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(NAME)
 
 fclean: clean
 	rm -f $(NAME)
