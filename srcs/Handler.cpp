@@ -21,6 +21,11 @@ void Handler::setConfig(ServerConfig &config)
 	this->_config = config;
 }
 
+int	Handler::WorkingLocationIndex(void)
+{
+	return _WorkingLocationIndex;
+}
+
 // ------------- METHODS -------------
 
 void Handler::printRequstData()
@@ -171,7 +176,7 @@ void Handler::ParseRequestHeader(char *req)
 	body = req + header_len + 4;						// Save the body
 	std::stringstream request_stream(header);
 
-	request_stream >> std::skipws >> std::ws >> this->_method; // Streaming methode into _methode while take care of white spaces
+	request_stream >> std::skipws >> std::ws >> this->_method; // Streaming methode into _methode while taking care of white spaces
 	request_stream >> std::skipws >> std::ws >> this->_uri;	   // same for path
 	std::getline(request_stream, current_line);				   // skip the remaining part of the request line (HTTP/1.1)
 
@@ -190,13 +195,13 @@ void Handler::ParseRequestHeader(char *req)
 	
 	if (this->_method == "GET")
 		this->HandleGet();
-	else if (this->_method == "POST")
-		this->HandlePost(body);
-	else if (this->_method == "DELETE")
-		this->HandleDelete();
+//	else if (this->_method == "POST")
+//		this->HandlePost(body);
+//	else if (this->_method == "DELETE")
+//		this->HandleDelete();
 }
 
-// Check for Possiple error in the Request
+// Check for Possible error in the Request
 bool Handler::validateRequest()
 {
 	// if Transfer-Encoding exist and not match [chunked]
@@ -239,38 +244,56 @@ bool Handler::matchLocation()
 {
 	std::string path = this->_uri;
 	std::vector<ServerLocation> serverLocations = this->_config.GetLocationsVec();
+	int tmp_index = 0;
+	size_t i = 0, old_size = 0, root_location = 0;
 
 	// Seperate Path from args if there is any
 	if (this->_uri.find('?') != std::string::npos)
 		path = this->_uri.substr(0, this->_uri.find('?'));
 
-	// match path with to the right location
-	size_t i;
+	//find the closest location to requested resource
 	for (i = 0; i < serverLocations.size(); i++)
 	{
-		if (serverLocations[i].GetLocationPath() == path)
+		tmp_index = path.find(serverLocations[i].GetLocationPath());
+		if (tmp_index != -1)
 		{
-			if (serverLocations[i].GetRedirectionInfo().RedirectionFlag)
+			if (serverLocations[i].GetLocationPath() == "/")//saving '/' location
+				root_location = i; 
+			if ((path[0] == '/') && (path.length() == 1))// case of '/' only
+				_WorkingLocationIndex = i;
+			if (serverLocations[i].GetLocationPath().length() > old_size)//case of closest valid location
 			{
-				std::string path = serverLocations[i].GetRedirectionInfo().RedirectionPath;
-				this->redirectionResponse(serverLocations[i].GetRedirectionInfo().RedirectionCode, path);
-				return false;
+				old_size = serverLocations[i].GetLocationPath().length();
+                _WorkingLocationIndex = i;
 			}
-			std::vector<std::string> allowedMethods = serverLocations[i].GetAllowedMethodsVec();
-			if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
-			{
-				this->codeResponse("405");
-				return false;
-			}
-			// Check for location redirection
-			break;
+			if ((path[0] == '/') && (i == serverLocations.size()) && old_size == 0)//case of '/not_valid'
+                _WorkingLocationIndex = root_location;
 		}
 	}
-	if (i == serverLocations.size())
+
+
+	if (serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionFlag)
 	{
-		this->codeResponse("404");
+		std::string path = serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionPath;
+		this->redirectionResponse(serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionCode, path);
 		return false;
 	}
+	std::vector<std::string> allowedMethods = serverLocations[_WorkingLocationIndex].GetAllowedMethodsVec();
+	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
+	{
+		this->codeResponse("405");
+		return false;
+	}
+	// Check for location redirection
+
+	//based on new design, path will be checked ferther in every method for validity
+	
+	// if (i == serverLocations.size())
+	// {
+	// 	this->codeResponse("404");
+	// 	return false;
+	// }
+
 	return true;
 }
 
@@ -336,7 +359,22 @@ void Handler::HandlePost(char *body)
 
 void Handler::HandleGet()
 {
-	fileResponse("test/homepage.html", "200");
+	int RepStrPos;
+    std::string RealPath;
+    std::cout << "HandleGet---> " << this->_uri << "\n";
+    std::cout << "HandleGet---> " << this->_method << "\n";
+    std::cout << "HandleGet---> " << this->_WorkingLocationIndex << "\n";
+
+	RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
+    if (RepStrPos < 0)
+        this->codeResponse("404");
+    else
+    {
+        _uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+        std::cout << "###>" << _uri << "\n";
+    }
+
+	//fileResponse("test/homepage.html", "200");
 }
 
 void Handler::HandleDelete()

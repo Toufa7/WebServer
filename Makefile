@@ -12,7 +12,7 @@ HEADERS = includes/Server.hpp \
 	includes/Client.hpp \
 	includes/Shared.hpp \
 	includes/Config.hpp \
-	includes/Handler.hpp
+	includes/Handler.hpp \
 
 
 all : $(NAME)
@@ -22,6 +22,7 @@ $(NAME): $(FILES) $(HEADERS)
 
 clean:
 	rm -f $(NAME)
+	rm -rf Server.dSYM
 
 fclean: clean
 	rm -f $(NAME)

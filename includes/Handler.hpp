@@ -24,6 +24,7 @@ class Handler
 		std::string GetMimeType();
 		std::string GetStatusCode();
 		void 		setConfig(ServerConfig &config);
+		int			WorkingLocationIndex(void);
 
 	private:
     	std::map<std::string, std::string> _req_header;
@@ -33,6 +34,7 @@ class Handler
 		std::string _status_text;
 		Shared 		_shared;
 		ServerConfig _config;
+		int			_WorkingLocationIndex;
 
 		void	HandlePost(char *body);
 		void	HandleGet();

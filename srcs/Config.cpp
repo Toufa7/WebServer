@@ -132,22 +132,22 @@ void GlobalConfig::ParseConfigFile(char *av)
 
 
     /*----------------------------------- Extracting each "server" ----------------------------------*/
-    oc = read_data.find("server {");
+    oc = read_data.find("server ");
     if (oc >= 0)
     {
         while (oc >= 0)
         {
-            soc = read_data.find("server {", oc + 1);
+            soc = read_data.find("server ", oc + 1);
             if (soc > oc)//since oc is already bigger than 0,so for soc to be after oc, it should be be bigger
             {
                 server = read_data.substr(oc, soc - oc);
-                oc = read_data.find("server {", soc + 1);
+                oc = read_data.find("server ", soc + 1);
                 ParseServerConfig(server);
             }
             if (soc < oc && soc > 0)
             {
                 server = read_data.substr(soc, oc - soc);
-                soc = read_data.find("server {", oc + 1);
+                soc = read_data.find("server ", oc + 1);
                 ParseServerConfig(server);
             }
             if (soc < 0 || oc < 0 || oc == 0) // if soc < 0 that means there's only one server
