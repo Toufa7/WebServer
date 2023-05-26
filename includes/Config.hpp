@@ -37,6 +37,7 @@ class ServerLocation
         std::string                 _Root;
         std::string                 _Upload;
         std::vector<std::string>    _AllowedMethodsVec;
+        std::vector<std::string>    _IndexesVec;
     public:
         ServerLocation();
         ~ServerLocation();
@@ -49,6 +50,7 @@ class ServerLocation
         std::string                 GetRoot(void);
         std::string                 GetUpload(void);
         std::vector<std::string>    GetAllowedMethodsVec(void);
+        std::vector<std::string>    GetIndexesVec(void);
 };
 
 class ServerConfig : public ServerLocation

@@ -359,21 +359,63 @@ void Handler::HandlePost(char *body)
 
 void Handler::HandleGet()
 {
-	int RepStrPos;
-    std::string RealPath;
-    std::cout << "HandleGet---> " << this->_uri << "\n";
-    std::cout << "HandleGet---> " << this->_method << "\n";
-    std::cout << "HandleGet---> " << this->_WorkingLocationIndex << "\n";
+	int			RepStrPos;
+    size_t      i = 0;
+    std::string	RealPath, tmp_str;
+	struct stat	s, t;
+
+    // std::cout << "HandleGet---> " << this->_uri << "\n";
+    // std::cout << "HandleGet---> " << this->_method << "\n";
+    // std::cout << "HandleGet---> " << this->_WorkingLocationIndex << "\n";
 
 	RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
     if (RepStrPos < 0)
         this->codeResponse("404");
     else
-    {
         _uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
-        std::cout << "###>" << _uri << "\n";
-    }
+	if (stat(_uri.c_str(),&s) == 0)
+	{
+    	if ( s.st_mode & S_IFDIR )
+    	{
+			if (_uri[_uri.size() - 1] != '/')
+                _uri += '/';
+            if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetIndexesVec().empty() == 0)//identify the working index
+			{
+				for (i = 0; i < this->_config.GetLocationsVec()[_WorkingLocationIndex].GetIndexesVec().size(); i++)
+				{
+					tmp_str = _uri;
+					tmp_str += this->_config.GetLocationsVec()[_WorkingLocationIndex].GetIndexesVec()[i];
+					if (stat(tmp_str.c_str(), &t) == 0)
+						break;
+					tmp_str.erase();
+				}
+			}
 
+                std::cout << "tmp_str is |" << tmp_str << "|\n";
+			if (tmp_str.empty() == 0)
+			{
+				//case of valid index file so you shuold handle cgi or not
+			}
+			else
+			{
+				//case of no index file and should check auto index
+            //std::cout << "There's no place for losers" << "\n";
+                if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetAutoIndex() == 1)
+                {
+                    //return directory content
+                }
+                else
+                    this->codeResponse("403");
+            }
+    	}
+    	else if( s.st_mode & S_IFREG )
+    	{
+        	//it's a file
+			std::cout << "(IFREG)\n";
+    	}
+	}
+	else
+        this->codeResponse("404");
 	//fileResponse("test/homepage.html", "200");
 }
 

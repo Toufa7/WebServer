@@ -33,6 +33,7 @@ ServerLocation & ServerLocation::operator = (const ServerLocation & ServerObj)
     this->_Root = ServerObj._Root;
     this->_Upload = ServerObj._Upload;
     this->_AllowedMethodsVec = ServerObj._AllowedMethodsVec;
+    this->_IndexesVec = ServerObj._IndexesVec;
     return *this;
 }
 
@@ -207,7 +208,7 @@ void    GlobalConfig::ParseServerConfig(std::string server)
     {
         colon_pos = server.find(":", key_pos);
         if (colon_pos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find Host Port).");
         tmp._Host = server.substr(key_pos + 7, (colon_pos - (key_pos + 7)));
         value_pos = server.find(";", colon_pos);
         if (value_pos < 0)
@@ -226,7 +227,7 @@ void    GlobalConfig::ParseServerConfig(std::string server)
     {
         scolon_pos = server.find(";", (key_pos + 13));
         if (scolon_pos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find Server Names).");
         tmp._ServerNames = server.substr((key_pos + 13), scolon_pos - (key_pos + 13));
         value_pos = tmp._ServerNames.find(" ");
         if (value_pos != -1)
@@ -251,7 +252,7 @@ void    GlobalConfig::ParseServerConfig(std::string server)
     {
         scolon_pos = server.find(";", (key_pos + 17));
         if (scolon_pos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find Client Body Size).");
         tmp._ClientBodySize = server.substr((key_pos + 17), scolon_pos - (key_pos + 17));
     }
     else
@@ -268,7 +269,7 @@ void    GlobalConfig::ParseServerConfig(std::string server)
             {
                 scolon_pos = server.find(";", (key_pos + 11));
                 if (scolon_pos < 0)
-                    InvalidConfigFile("Invalid config file : There was an error.");
+                    InvalidConfigFile("Invalid config file : There was an error (Find Error Page).");
                 tmp_str = server.substr((key_pos + 11), scolon_pos - (key_pos + 11));
                 tmp.ParseErrorPage(tmp_str);
             }
@@ -291,7 +292,7 @@ void    GlobalConfig::ParseServerConfig(std::string server)
             {
                 value_pos = server.find("}", key_pos);
                 if (value_pos < 0)
-                    InvalidConfigFile("Invalid config file : There was an error.");
+                    InvalidConfigFile("Invalid config file : There was an error (Find Loactions).");
                 location = server.substr(key_pos, (value_pos - key_pos) + 1);
                 tmp.ParseServerLocation(location);
             }
@@ -316,10 +317,10 @@ void    ServerConfig::ParseServerLocation(std::string location)
     /*------------------------------------- find location path -------------------------------------*/
     key_pos = location.find("location ");
     if (key_pos < 0)
-        InvalidConfigFile("Invalid config file : There was an error.");
+        InvalidConfigFile("Invalid config file : There was an error (Find Location Path).");
     value_pos = location.find("{", key_pos + 1);
     if (value_pos < 0)
-        InvalidConfigFile("Invalid config file : There was an error.");
+        InvalidConfigFile("Invalid config file : There was an error (Find Location Path).");
     location_tmp._LocationPath = location.substr((key_pos + 9), value_pos - (key_pos + 10));
     /*----------------------------------- end find location path -----------------------------------*/
 
@@ -329,7 +330,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
     {
         value_pos = location.find(";", key_pos + 1);
         if (value_pos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find allowedmwthodes).");
         tmp_str = location.substr((key_pos + 14), value_pos - (key_pos + 14));
 
         npos = tmp_str.find("GET");
@@ -344,7 +345,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
         tmp_str.erase();
     }
     else
-        InvalidConfigFile("Invalid config file : allowed methods not found.");
+        InvalidConfigFile("Invalid config file : allowed methods not found (Find allowedmwthodes).");
     /*------------------------------------- End of allowed methods -------------------------------------*/
 
     /*----------------------------------------- auto index ----------------------------------------*/
@@ -353,14 +354,14 @@ void    ServerConfig::ParseServerLocation(std::string location)
     {
         value_pos = location.find(";", key_pos + 1);
         if (value_pos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find autoindex).");
         tmp_str = location.substr((key_pos + 10), value_pos - (key_pos + 10));
         if (tmp_str.find("on") >= 0)
             location_tmp._AutoIndex = 1;
         tmp_str.erase();
     }
     else
-        InvalidConfigFile("Invalid config file : auto index not found.");
+        InvalidConfigFile("Invalid config file : auto index not found (Find autoindex).");
     /*------------------------------------- End of auto index -------------------------------------*/
 
     /*------------------------------------- find root -------------------------------------*/
@@ -369,7 +370,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
     {
         value_pos = location.find(";", key_pos + 1);
         if (value_pos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find Root).");
         location_tmp._Root = location.substr((key_pos + 5), value_pos - (key_pos + 5));
     }
     else
@@ -383,11 +384,11 @@ void    ServerConfig::ParseServerLocation(std::string location)
     {
         value_pos = location.find(";", key_pos + 1);
         if (value_pos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find CGI).");
         tmp_str = location.substr((key_pos + 4), value_pos - (key_pos + 4));
         npos = tmp_str.find(" ", 1);
         if (npos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find CGI).");
         location_tmp._CgiInfo.type = tmp_str.substr(0, npos);
         npos = tmp_str.find(" ");
         if (npos < 0)
@@ -404,16 +405,37 @@ void    ServerConfig::ParseServerLocation(std::string location)
         location_tmp._RedirectionInfo.RedirectionFlag = TRUE;
         value_pos = location.find(";", key_pos + 1);
         if (value_pos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find Redirection).");
         tmp_str = location.substr((key_pos + 7), value_pos - (key_pos + 7));
         npos = tmp_str.find(" ", 1);
         if (npos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find Redirection).");
         location_tmp._RedirectionInfo.RedirectionCode = tmp_str.substr(0, npos);
         location_tmp._RedirectionInfo.RedirectionPath = tmp_str.substr(npos + 1, value_pos - (npos + 1));
         tmp_str.erase();
     }
     /*----------------------------------- end of find redirection -----------------------------------*/
+
+    /*----------------------------------------- find indexes ----------------------------------------*/
+    key_pos = location.find("indexes ");
+    if (key_pos > 0)
+    {
+        while (1)
+        {
+            if (key_pos >= 0)
+            {
+                value_pos = location.find("\n", key_pos + 1);
+                if (value_pos < 0)
+                    InvalidConfigFile("Invalid config file : There was an error (Find Index).");
+                location_tmp._IndexesVec.push_back(location.substr((key_pos + 8), value_pos - (key_pos + 8)));
+            }
+            else
+                break;
+            key_pos = location.find("indexes ", key_pos + 1);
+        }
+    }
+    //do not forget to add default index
+    /*-------------------------------------- end of find indexes ------------------------------------*/
     this->_LocationsVec.push_back(location_tmp);
 }
 
@@ -604,4 +626,9 @@ void ServerConfig::setClientSocket(int n)
 std::map<std::string, std::string>& ServerConfig::GetErrorPageMap(void)
 {
     return (_ErrorPageMap);
+}
+
+std::vector<std::string> ServerLocation::GetIndexesVec(void)
+{
+    return (_IndexesVec);
 }
