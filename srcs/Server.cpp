@@ -8,7 +8,6 @@ void    Error(const char *msg)
     exit(1);
 }
 
-
 Server::Server(ServerConfig &config)
 {
     this->_config = config;
@@ -52,15 +51,22 @@ void Server::SendResponseHeader(int clt_skt)
     if (send(clt_skt, response_header, strlen(response_header), 0) == -1)
         Error("Error (Send) -> ");
 }
+
+void Server::SendResponseBody(int clt_skt)
+{
+    bytesread = read(fildes, buffer, sizeof(buffer));
+    if (bytesread == -1)
+        Error("Error (Read) -> ");
+    bytessent = send(clt_skt, buffer, bytesread, 0);
+    if (bytessent == -1)
+        Error("Error (Send) -> ");
+}
+
 void Server::Start()
 {
     CreateServer();
-    int maxfds, activity, active_clt;
-    struct timeval timeout;
     timeout.tv_sec = 100;
     timeout.tv_usec = 100;
-
-
 
     // Init our array of clients socket with -1
     for (int i = 0; i < MAX_CLT; i++)
@@ -68,8 +74,11 @@ void Server::Start()
     
     // Zero the readfds
     FD_ZERO(&readfds);
+
     // Add the readfds to the set
     FD_SET(server_socket, &readfds);
+
+    // highest numbered fildes in the set
     maxfds = server_socket;
     int bytesreceived = 0;
 
@@ -78,7 +87,7 @@ void Server::Start()
         tmpfds = readfds;
         // Anything except -1 it's a success for select()
         std::cout << "Select listen for an activity ...\n";
-        activity = select(maxfds + 1, &tmpfds, NULL, NULL, &timeout);
+        activity = select(maxfds + 1, &tmpfds, NULL, NULL, NULL);
         std::cout << "Select catch one \n";
         if (activity == -1)
            Error("Error (Select) -> ");
@@ -130,12 +139,7 @@ void Server::Start()
                     {
                         SendResponseHeader(active_clt);
                     }
-                    bytesread = read(fildes, buffer, sizeof(buffer));
-                    if (bytesread == -1)
-                        Error("Error (Read) -> ");
-                    bytessent = send(active_clt, buffer, bytesread, 0);
-                    if (bytessent == -1)
-                        Error("Error (Send) -> ");
+                    SendResponseBody(active_clt);
             }
         }
     }

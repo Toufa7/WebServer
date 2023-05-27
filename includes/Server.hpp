@@ -52,6 +52,12 @@ class Server
         fd_set                  readfds, tmpfds;
         int                     maxfds, activity, active_clt;
         int                     clients[MAX_CLT];
+        struct timeval          timeout;
+
+
+        // Response
+        int                     bytesreceived;
+
 
 
         
@@ -59,9 +65,10 @@ class Server
 
         // Member Functions
         void Init();
+        void CreateServer();
         void Start();
         void SendResponseHeader(int clt_skt);
-        void CreateServer();
+        void SendResponseBody(int clt_skt);
     
     private:
         ServerConfig _config;
