@@ -58,6 +58,28 @@ std::string Handler::generatePageCode(std::string statusCode)
 	return res;
 }
 
+std::string Handler::generateListDir(std::string statusCode, std::string ls)
+{
+	//5asek tcheki wach ls 3amra wla 5awya
+	std::stringstream s(ls);
+	std::string statusMessage = this->_shared.status_codes[statusCode];
+	std::string TmpStr, res = "<html><head><title><title>Directory list</title></title></head><body><h1><ul>";
+	while (std::getline(s, TmpStr,'\n'))
+	{
+		if ( TmpStr != "." || TmpStr != ".." )
+		{
+			res += "<li><a href=\"";
+			res += this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath() += '/';
+			res += TmpStr;
+			res += "\">";
+			res += TmpStr;
+			res += "</a></li>";
+		}
+	}
+	res += "</h1></body></html>";
+	return res;
+}
+
 void Handler::codeResponse(std::string statusCode)
 {
 	std::stringstream response;
@@ -79,6 +101,27 @@ void Handler::codeResponse(std::string statusCode)
 	}
 	else
 		htmlContent = this->generatePageCode(statusCode);
+
+	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
+	response << "Server: " << this->_config.GetServerNames() << "\r\n";
+	response << "Content-Type: text/html\r\n";
+	response << "Content-Length: " << htmlContent.length() << "\r\n";
+	response << "Connection: close\r\n";
+	response << "\r\n";
+	response << htmlContent;
+
+	if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+	{
+		std::cerr << "Error : Sending failed\n";
+		exit(1);
+	}
+	std::cout << "\n---------------------- error response --------------------- " << std::endl;
+	std::cout << response.str() << std::endl;
+}
+
+void Handler::getcodeResponse(std::string statusCode, std::string htmlContent)
+{
+	std::stringstream response;
 
 	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
 	response << "Server: " << this->_config.GetServerNames() << "\r\n";
@@ -361,7 +404,7 @@ void Handler::HandleGet()
 {
 	int			RepStrPos;
     size_t      i = 0;
-    std::string	RealPath, tmp_str;
+    std::string	RealPath, tmp_str, DirStr;
 	struct stat	s, t;
 
     // std::cout << "HandleGet---> " << this->_uri << "\n";
@@ -375,6 +418,7 @@ void Handler::HandleGet()
         _uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
 	if (stat(_uri.c_str(),&s) == 0)
 	{
+		/*------------------------------------------- DIR Handler ----------------------------------------------------*/
     	if ( s.st_mode & S_IFDIR )
     	{
 			if (_uri[_uri.size() - 1] != '/')
@@ -390,29 +434,50 @@ void Handler::HandleGet()
 					tmp_str.erase();
 				}
 			}
-
-                std::cout << "tmp_str is |" << tmp_str << "|\n";
 			if (tmp_str.empty() == 0)
 			{
 				//case of valid index file so you shuold handle cgi or not
 			}
 			else
 			{
-				//case of no index file and should check auto index
-            //std::cout << "There's no place for losers" << "\n";
+				//case of no index file and should check auto index:handled
                 if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetAutoIndex() == 1)
                 {
-                    //return directory content
+                    DIR *DirPtr;
+                    struct dirent *Dir;
+                    DirPtr = opendir(_uri.c_str());
+                    if (DirPtr)
+                    {
+                        while ((Dir = readdir (DirPtr)) != NULL)
+						{
+                            DirStr += Dir->d_name;
+							DirStr += '\n';
+						}
+                        closedir(DirPtr);
+                    }
+                    if (DirStr.empty() == 0)
+                        this->getcodeResponse("200", generateListDir("200", DirStr));
+						//addi hna l function li radi t handli l auto indexing
                 }
                 else
-                    this->codeResponse("403");
+                    this->codeResponse("403");//case of no index file and no index file:handled
             }
     	}
+		/*------------------------------------------- DIR Handler end ------------------------------------------------*/
+
+		/*--------------------------------------------- File Handler -------------------------------------------------*/
     	else if( s.st_mode & S_IFREG )
     	{
-        	//it's a file
-			std::cout << "(IFREG)\n";
+			if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetCgiInfo().path != "n/a")
+			{
+				//handle file cgi
+			}
+			else
+			{
+				//send file as is
+			}
     	}
+		/*--------------------------------------------- File Handler -------------------------------------------------*/
 	}
 	else
         this->codeResponse("404");

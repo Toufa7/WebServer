@@ -11,6 +11,7 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <fstream>
+#include <dirent.h>
 #include "Shared.hpp"
 #include "Config.hpp"
 
@@ -45,8 +46,10 @@ class Handler
 		void	printRequstData();
 		void    fileResponse(std::string path, std::string statusCode);
 		void 	codeResponse(std::string statusCode);
+		void	getcodeResponse(std::string statusCode, std::string htmlContent);
 		void	redirectionResponse(std::string statusCode, std::string location);
 		std::string generatePageCode(std::string statusCode);
+		std::string generateListDir(std::string statusCode, std::string ls);
 
 
 };

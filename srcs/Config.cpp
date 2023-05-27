@@ -11,7 +11,7 @@ ServerLocation::ServerLocation()
     _CgiInfo.path = "n/a";
 
     _LocationPath = "n/a";
-    _AutoIndex = FALSE;
+    _AutoIndex = 0;
     _Root = "n/a";
     _Upload = "n/a";   
 }
@@ -348,7 +348,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
         InvalidConfigFile("Invalid config file : allowed methods not found (Find allowedmwthodes).");
     /*------------------------------------- End of allowed methods -------------------------------------*/
 
-    /*----------------------------------------- auto index ----------------------------------------*/
+    /*------------------------------------------ autoindex ----------------------------------------*/
     key_pos = location.find("autoindex ");
     if (key_pos > 0)
     {
@@ -356,7 +356,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
         if (value_pos < 0)
             InvalidConfigFile("Invalid config file : There was an error (Find autoindex).");
         tmp_str = location.substr((key_pos + 10), value_pos - (key_pos + 10));
-        if (tmp_str.find("on") >= 0)
+        if (tmp_str.find("on") != std::string::npos)
             location_tmp._AutoIndex = 1;
         tmp_str.erase();
     }
