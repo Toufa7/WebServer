@@ -23,6 +23,8 @@
 #define LOCALHOST   "127.0.0.1"
 #define TRUE        1
 #define CRLF        "\r\n"          // The determination of the line 
+#define MAX_CLT     10
+#define CHUNK_SIZE  1024
 
 // Setuping and startig the server : Creating socket -> binding -> listening (Handling multiple clients)
 class Server
@@ -39,16 +41,23 @@ class Server
         socklen_t               clt_addr;
         size_t                  msg_sent;
         size_t                  msg_received;
-        char                    requested_data[10240];
-        std::string             response_header;
+        char                    requested_data[8192];
         int                     content_length;
+        struct stat             infos;
+        int                     fildes;
+        char                    buffer[CHUNK_SIZE];
+        int                     bytesread, bytessent,videosize, idx;
+        
+
 
         // Member Functions
         void Init();
-        void SendResponse();
-        void GetRequest();
+        void SendResponse(int client_socket);
+        void GetRequest(int client_socket);
+        void SendVideo(int client_socket);
         void Start();
-        void ResponseHeader();
+        void CreateServer();
+        void ResponseHeader(int client_socket);
     
     private:
         ServerConfig _config;
