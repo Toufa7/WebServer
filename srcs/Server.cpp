@@ -43,12 +43,19 @@ void    Server::CreateServer()
     videosize = infos.st_size;
 }
 
+void Server::SendResponseHeader(int clt_skt)
+{
+    char response_header[100] = "HTTP/1.1 200 OK\r\n"
+                                "Server: Allah Y7ssen L3wan\r\n"
+                                "Content-Length: 332\r\n"
+                                "Content-Type: text/html\r\n\r\n";
+    if (send(clt_skt, response_header, strlen(response_header), 0) == -1)
+        Error("Error (Send) -> ");
+}
 void Server::Start()
 {
     CreateServer();
     int maxfds, activity, active_clt;
-    int clients[MAX_CLT];
-    fd_set  readfds, tmpfds;
     struct timeval timeout;
     timeout.tv_sec = 100;
     timeout.tv_usec = 100;
@@ -66,13 +73,13 @@ void Server::Start()
     maxfds = server_socket;
     int bytesreceived = 0;
 
-    while (true)
+    while (TRUE)
     {
         tmpfds = readfds;
         // Anything except -1 it's a success for select()
-        std::cout << "Before Select \n";
+        std::cout << "Select listen for an activity ...\n";
         activity = select(maxfds + 1, &tmpfds, NULL, NULL, &timeout);
-        std::cout << "After Select \n";
+        std::cout << "Select catch one \n";
         if (activity == -1)
            Error("Error (Select) -> ");
         // checking for new connections need to be accepted        
@@ -121,17 +128,9 @@ void Server::Start()
                     // I know i should only send the header one time and as well opening the file and extract the infos
                     else 
                     {
-                        std::cout << "------> Header \n";
-                        char response_header[100] = "HTTP/1.1 200 OK\r\n"
-                                                    "Server: Allah Y7ssen L3wan\r\n"
-                                                    "Content-Length: 332\r\n"
-                                                    "Content-Type: text/html\r\n\r\n";
-                        if (send(active_clt, response_header, strlen(response_header), 0) == -1)
-                            Error("Error: Sending Header Failed\n");
+                        SendResponseHeader(active_clt);
                     }
-                    std::cout << "------> Body \n";;          
                     bytesread = read(fildes, buffer, sizeof(buffer));
-                    std::cout << "Read \n" << bytesread << "\n";
                     if (bytesread == -1)
                         Error("Error (Read) -> ");
                     bytessent = send(active_clt, buffer, bytesread, 0);

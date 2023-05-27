@@ -32,7 +32,7 @@ class Server
     public:
         Server();
         Server(ServerConfig &config);
-        // Member Variables
+        // Server Init
         int                     server_socket; // The server listen on this socket
         int                     client_socket; // The server serve the client on this socket
         struct addrinfo         server_infos;
@@ -41,23 +41,27 @@ class Server
         socklen_t               clt_addr;
         size_t                  msg_sent;
         size_t                  msg_received;
+
+        // Multiplexing
         char                    requested_data[8192];
         int                     content_length;
         struct stat             infos;
         int                     fildes;
         char                    buffer[CHUNK_SIZE];
         int                     bytesread, bytessent,videosize, idx;
+        fd_set                  readfds, tmpfds;
+        int                     maxfds, activity, active_clt;
+        int                     clients[MAX_CLT];
+
+
         
 
 
         // Member Functions
         void Init();
-        void SendResponse(int client_socket);
-        void GetRequest(int client_socket);
-        void SendVideo(int client_socket);
         void Start();
+        void SendResponseHeader(int clt_skt);
         void CreateServer();
-        void ResponseHeader(int client_socket);
     
     private:
         ServerConfig _config;
