@@ -49,10 +49,10 @@ class Server
         int                     fildes;
         char                    buffer[CHUNK_SIZE];
         int                     bytesread, bytessent,videosize, idx;
-        fd_set                  readfds, tmpfds;
+        fd_set                  readfds, writefds, tmpfdsread, tmpfdswrite;
         int                     maxfds, activity, active_clt;
         int                     clients[MAX_CLT];
-
+        bool                    client_write_ready;
 
         
 
