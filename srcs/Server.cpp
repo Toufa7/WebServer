@@ -76,9 +76,9 @@ void Server::Start()
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
         // Anything except -1 it's a success for select()
-        // std::cout << "Select listen for an activity ...\n";
+        std::cout << "Select listen for an activity ...\n";
         activity = select(maxfds + 1, &tmpfdsread, &writefds, NULL, NULL);
-        // std::cout << "Select catch one \n";
+        std::cout << "Select catch one \n";
         if (activity == -1)
            Error("Error (Select) -> ");
         // checking for new connections need to be accepted        
@@ -115,7 +115,7 @@ void Server::Start()
                 continue;
             if (FD_ISSET(active_clt, &tmpfdsread) && !client_write_ready)
             {
-                    std::cout << "Reading ..." << std::endl;
+                    std::cout << "Hello From read" << std::endl;
                     bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
                     // Closed connection from the client
                     if (bytesreceived == 0)
@@ -142,12 +142,13 @@ void Server::Start()
             }
             if(FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {
-                std::cout << "Sending ..." << std::endl;
                 bytesread = read(fildes, buffer, sizeof(buffer));
                 std::cout << bytesread << std::endl;
                 if (bytesread == -1)
                     Error("Error (Read) -> ");
+                std::cout << "=====> Hello From write" << bytesread << std::endl;
                 bytessent = send(active_clt, buffer, bytesread, 0);
+                std::cout << "==========>" << std::endl;
                 if (bytessent == -1)
                     Error("Error (Send) -> ");
             }
