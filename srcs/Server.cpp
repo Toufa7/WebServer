@@ -76,9 +76,9 @@ void Server::Start()
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
         // Anything except -1 it's a success for select()
-        std::cout << "Select listen for an activity ...\n";
-        activity = select(maxfds + 1, &tmpfdsread, &writefds, NULL, NULL);
-        std::cout << "Select catch one \n";
+        // std::cout << "Select listen for an activity ...\n";
+        activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
+        // std::cout << "Select catch one \n";
         if (activity == -1)
            Error("Error (Select) -> ");
         // checking for new connections need to be accepted        
@@ -86,17 +86,17 @@ void Server::Start()
         {
             if ((client_socket = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr)) == -1)
                Error("Error (Accept) -> ");
+            std::cout << "Cliuen FD -> " << client_socket << "\n";
             // Find an empty slot in the set & add the new client_socket to the client socket set (Array)
             for (int i = 0; i < MAX_CLT; i++)
             {
                 if (clients[i] < 0)
                 {
+                    std::cout << "Clietn\n";
                     clients[i] = client_socket;
-                    fildes = open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY);
-                    if (fildes == -1)
+                    fildes[i] = open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY);
+                    if (fildes[i] == -1)
                         Error("Error (Open) -> ");
-                    fstat(fildes, &infos);
-                    videosize = infos.st_size;
                     client_write_ready = false;
                     break;
                 }
@@ -123,7 +123,7 @@ void Server::Start()
                         close(active_clt);
                         FD_CLR(active_clt, &readfds); // (a savoir)
                         clients[i] = -1;
-                        close(fildes);
+                        close(fildes[i]);
                         std::cout << "Connection Closed\n";
                     }
                     else if (bytesreceived < 0)
@@ -136,19 +136,17 @@ void Server::Start()
                     // I know i should only send the header one time and as well opening the file and extract the infos
                     else 
                     {
-                        client_write_ready = true;
                         SendResponseHeader(active_clt);
                     }
+                    client_write_ready = true;
             }
-            if(FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
+            if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {
-                bytesread = read(fildes, buffer, sizeof(buffer));
-                std::cout << bytesread << std::endl;
+                bytesread = read(fildes[i], buffer, sizeof(buffer));
+                // std::cout << " -> " << bytesread << std::endl;
                 if (bytesread == -1)
                     Error("Error (Read) -> ");
-                std::cout << "=====> Hello From write" << bytesread << std::endl;
                 bytessent = send(active_clt, buffer, bytesread, 0);
-                std::cout << "==========>" << std::endl;
                 if (bytessent == -1)
                     Error("Error (Send) -> ");
             }

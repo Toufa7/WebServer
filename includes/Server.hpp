@@ -46,7 +46,8 @@ class Server
         char                    requested_data[8192];
         int                     content_length;
         struct stat             infos;
-        int                     fildes;
+        int                     fildes[MAX_CLT];
+        // Class client {linked list socket, fd};
         char                    buffer[CHUNK_SIZE];
         int                     bytesread, bytessent,videosize, idx;
         fd_set                  readfds, writefds, tmpfdsread, tmpfdswrite;
