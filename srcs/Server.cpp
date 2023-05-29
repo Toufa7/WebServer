@@ -94,15 +94,17 @@ void Server::Start()
                 {
                     std::cout << "Clietn\n";
                     clients[i] = client_socket;
+                    // Replace the path with the requested URI
                     fildes[i] = open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY);
                     if (fildes[i] == -1)
                         Error("Error (Open) -> ");
+                    // Redirection or 404
                     client_write_ready = false;
                     break;
                 }
             }
             // Add the new fildes to the set && update the max fildes
-            FD_SET(client_socket, &readfds); // (a savoir)
+            FD_SET(client_socket, &readfds);
             FD_SET(client_socket, &writefds);
             if (client_socket > maxfds)
                 maxfds = client_socket;
@@ -115,13 +117,13 @@ void Server::Start()
                 continue;
             if (FD_ISSET(active_clt, &tmpfdsread) && !client_write_ready)
             {
-                    std::cout << "Hello From read" << std::endl;
                     bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
+                    // Parsing the request and opening the URL
                     // Closed connection from the client
                     if (bytesreceived == 0)
                     {
                         close(active_clt);
-                        FD_CLR(active_clt, &readfds); // (a savoir)
+                        FD_CLR(active_clt, &readfds);
                         clients[i] = -1;
                         close(fildes[i]);
                         std::cout << "Connection Closed\n";
