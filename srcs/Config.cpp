@@ -107,7 +107,7 @@ void    InvalidConfigFile(std::string err_message)
 
 void GlobalConfig::ParseConfigFile(char *av)
 {
-    int             dot_position = 0, oc = 0, soc = 0; //oc: occurrence of some things, soc: "server" substring occurrence in string
+    int             dot_position = 0, oc = 0, soc = 0;//oc: occurrence of some things, soc: "server" substring occurrence in string
     std::string     buffer, read_data, file_name(av), server;
     std::ifstream   config_file;
     

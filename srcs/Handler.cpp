@@ -136,7 +136,7 @@ void Handler::getcodeResponse(std::string statusCode, std::string htmlContent)
 		std::cerr << "Error : Sending failed\n";
 		exit(1);
 	}
-	std::cout << "\n---------------------- error response --------------------- " << std::endl;
+	std::cout << "\n---------------------- [getcodeResponse()] Response --------------------- " << std::endl;
 	std::cout << response.str() << std::endl;
 }
 
@@ -408,10 +408,6 @@ void Handler::HandleGet()
     size_t      i = 0;
     std::string	RealPath, tmp_str, DirStr;
 	struct stat	s, t;
-
-    // std::cout << "HandleGet---> " << this->_uri << "\n";
-    // std::cout << "HandleGet---> " << this->_method << "\n";
-    // std::cout << "HandleGet---> " << this->_WorkingLocationIndex << "\n";
 
 	RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
     if (RepStrPos < 0)

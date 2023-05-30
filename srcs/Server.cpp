@@ -79,7 +79,7 @@ void Server::Start()
         {
             if ((client_socket = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr)) == -1)
                Error("Error (Accept) -> ");            
-            _clients.push_back(Client(client_socket, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
+            _clients.push_back(Client(client_socket, open("/Users/ibnada/Desktop/trim.DD9DF7D5-FA6A-439E-9F1E-A85F35E2E9C8.mp4", O_RDONLY)));
                 client_write_ready = false;
             FD_SET(_clients.back().GetCltSocket(), &readfds);
             FD_SET(_clients.back().GetCltSocket(), &writefds);
@@ -89,12 +89,12 @@ void Server::Start()
         for (itb = _clients.begin(); itb != _clients.end(); itb++)
         {
             active_clt = itb->GetCltSocket();
-            // this->_config.setClientSocket(itb->GetCltSocket());
-            // this->_handler.setConfig(this->_config);
-            // this->_handler.ParseRequestHeader(requested_data);
+            //this->_config.setClientSocket(itb->GetCltSocket());
+            //this->_handler.setConfig(this->_config);
             if (FD_ISSET(active_clt, &tmpfdsread) && !client_write_ready)
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
+                //this->_handler.ParseRequestHeader(requested_data);
                 if (bytesreceived == 0)
                 {
                     close(active_clt);
