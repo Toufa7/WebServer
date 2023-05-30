@@ -321,6 +321,8 @@ bool Handler::matchLocation()
 		this->redirectionResponse(serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionCode, path);
 		return false;
 	}
+	// std::cout << "I Enter\n";
+	// exit(0);
 	std::vector<std::string> allowedMethods = serverLocations[_WorkingLocationIndex].GetAllowedMethodsVec();
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
 	{

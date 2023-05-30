@@ -48,6 +48,8 @@ void Server::SendResponseHeader(int clt_skt)
     if (send(clt_skt, response_header, strlen(response_header), 0) == -1)
         Error("Error (Send) -> ");
 }
+
+
 void Server::Start()
 {
     CreateServer();
@@ -55,12 +57,6 @@ void Server::Start()
     struct timeval timeout;
     timeout.tv_sec = 100;
     timeout.tv_usec = 100;
-
-
-
-    // Init our array of clients socket with -1
-    for (int i = 0; i < MAX_CLT; i++)
-        clients[i] = -1;
     
     // Zero the readfds
     FD_ZERO(&readfds);
@@ -73,77 +69,55 @@ void Server::Start()
 
     while (TRUE)
     {
+        // GetRequest();
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
-        // Anything except -1 it's a success for select()
-        // std::cout << "Select listen for an activity ...\n";
         activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
-        // std::cout << "Select catch one \n";
         if (activity == -1)
            Error("Error (Select) -> ");
-        // checking for new connections need to be accepted        
         if (FD_ISSET(server_socket, &tmpfdsread))
         {
             if ((client_socket = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr)) == -1)
-               Error("Error (Accept) -> ");
-            std::cout << "Cliuen FD -> " << client_socket << "\n";
-            // Find an empty slot in the set & add the new client_socket to the client socket set (Array)
-            for (int i = 0; i < MAX_CLT; i++)
-            {
-                if (clients[i] < 0)
-                {
-                    std::cout << "Client\n";
-                    clients[i] = client_socket;
-                    fildes[i] = open("./test/homepage.html", O_RDONLY);
-                    if (fildes[i] == -1)
-                        Error("Error (Open) -> ");
-                    client_write_ready = false;
-                    break;
-                }
-            }
-            // Add the new fildes to the set && update the max fildes
-            FD_SET(client_socket, &readfds); // (a savoir)
-            FD_SET(client_socket, &writefds);
-            if (client_socket > maxfds)
-                maxfds = client_socket;
+               Error("Error (Accept) -> ");            
+            _clients.push_back(Client(client_socket, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
+                client_write_ready = false;
+            FD_SET(_clients.back().GetCltSocket(), &readfds);
+            FD_SET(_clients.back().GetCltSocket(), &writefds);
+            if (_clients.back().GetCltSocket() > maxfds)
+                maxfds = _clients.back().GetCltSocket();
         }
-        // Loop over the client array to handle active connection
-        for (int i = 0; i < MAX_CLT; i++)
+        for (itb = _clients.begin(); itb != _clients.end(); itb++)
         {
-            active_clt = clients[i];
-            if (active_clt < 0)
-                continue;
+            active_clt = itb->GetCltSocket();
+            // this->_config.setClientSocket(itb->GetCltSocket());
+            // this->_handler.setConfig(this->_config);
+            // this->_handler.ParseRequestHeader(requested_data);
             if (FD_ISSET(active_clt, &tmpfdsread) && !client_write_ready)
             {
-                    std::cout << "Hello From read" << std::endl;
-                    bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
-                    // Closed connection from the client
-                    if (bytesreceived == 0)
-                    {
-                        close(active_clt);
-                        FD_CLR(active_clt, &readfds); // (a savoir)
-                        clients[i] = -1;
-                        close(fildes[i]);
-                        std::cout << "Connection Closed\n";
-                    }
-                    else if (bytesreceived < 0)
-                    {
-                        close(active_clt);
-                        FD_CLR(active_clt, &readfds);
-                        clients[i] = -1;
-                        Error("Error (Recv) -> ");
-                    }
-                    // I know i should only send the header one time and as well opening the file and extract the infos
-                    else 
-                    {
-                        SendResponseHeader(active_clt);
-                    }
-                    client_write_ready = true;
+                bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
+                if (bytesreceived == 0)
+                {
+                    close(active_clt);
+                    FD_CLR(active_clt, &readfds);
+                    _clients.erase(itb);
+                    close(itb->GetCltFd());
+                    std::cerr << "Connection Closed\n";
+                }
+                else if (bytesreceived < 0)
+                {
+                    close(active_clt);
+                    FD_CLR(active_clt, &readfds);
+                    _clients.erase(itb);
+                    close(itb->GetCltFd());
+                    Error("Error (Recv) -> ");
+                }
+                else 
+                    SendResponseHeader(active_clt);
+                client_write_ready = true;
             }
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {
-                bytesread = read(fildes[i], buffer, sizeof(buffer));
-                // std::cout << " -> " << bytesread << std::endl;
+                bytesread = read(itb->GetCltFd(), buffer, sizeof(buffer));
                 if (bytesread == -1)
                     Error("Error (Read) -> ");
                 bytessent = send(active_clt, buffer, bytesread, 0);

@@ -1,6 +1,7 @@
 Subject.pdf
 Server
 *.o
+*.mp4
 */*.o
 .vscode
 upload
