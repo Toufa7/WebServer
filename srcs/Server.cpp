@@ -43,8 +43,8 @@ void Server::SendResponseHeader(int clt_skt)
 {
     char response_header[100] = "HTTP/1.1 200 OK\r\n"
                                 "Server: Allah Y7ssen L3wan\r\n"
-                                "Content-Length: 82013359\r\n"
-                                "Content-Type: video/mp4\r\n\r\n";
+                                "Content-Length: 332\r\n"
+                                "Content-Type: text/html\r\n\r\n";
     if (send(clt_skt, response_header, strlen(response_header), 0) == -1)
         Error("Error (Send) -> ");
 }
@@ -92,9 +92,9 @@ void Server::Start()
             {
                 if (clients[i] < 0)
                 {
-                    std::cout << "Clietn\n";
+                    std::cout << "Client\n";
                     clients[i] = client_socket;
-                    fildes[i] = open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY);
+                    fildes[i] = open("./test/homepage.html", O_RDONLY);
                     if (fildes[i] == -1)
                         Error("Error (Open) -> ");
                     client_write_ready = false;
@@ -151,6 +151,7 @@ void Server::Start()
                     Error("Error (Send) -> ");
             }
         }
+        //  
     }
     close(server_socket);
 }

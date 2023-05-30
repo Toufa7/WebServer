@@ -63,10 +63,10 @@ std::string Handler::generateListDir(std::string statusCode, std::string ls)
 	//5asek tcheki wach ls 3amra wla 5awya
 	std::stringstream s(ls);
 	std::string statusMessage = this->_shared.status_codes[statusCode];
-	std::string TmpStr, res = "<html><head><title><title>Directory list</title></title></head><body><h1><ul>";
+	std::string TmpStr, res = "<html><head><title>Directory list</title></head><body><h1><ul>";
 	while (std::getline(s, TmpStr,'\n'))
 	{
-		if ( TmpStr != "." || TmpStr != ".." )
+		if (TmpStr != "..")
 		{
 			res += "<li><a href=\"";
 			res += this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath() += '/';
@@ -436,7 +436,15 @@ void Handler::HandleGet()
 			}
 			if (tmp_str.empty() == 0)
 			{
-				//case of valid index file so you shuold handle cgi or not
+				//case of valid index file so you should handle cgi or not
+				if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetCgiInfo().path != "n/a")
+                {
+                    //case of not handling CGI
+                }
+                else
+                {
+                    //case of handling cgi
+                }
 			}
 			else
 			{
