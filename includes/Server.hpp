@@ -13,6 +13,7 @@
 #include <fstream>
 
 #include <map>
+#include <list>
 #include <cstring>
 #include <sstream>
 #include "Handler.hpp"
@@ -25,6 +26,38 @@
 #define CRLF        "\r\n"          // The determination of the line 
 #define MAX_CLT     10
 #define CHUNK_SIZE  1024
+
+class Client
+{
+    private:
+        int     _fd;
+        int     _socket;
+        // bool    is_write_read;
+    public:
+        Client();
+        Client(int socket, int fildes)
+        {
+            _socket = socket;
+            _fd = fildes;
+        }
+        Client(int socket)
+        {
+            _socket = socket;
+        }
+
+        int GetCltFd()
+        {
+            return (this->_fd);
+        }
+        void SetSocket(int val)
+        {
+            this->_socket = val;
+        }
+        int GetCltSocket()
+        {
+            return (this->_socket);
+        }
+};
 
 // Setuping and startig the server : Creating socket -> binding -> listening (Handling multiple clients)
 class Server
@@ -46,18 +79,17 @@ class Server
         char                    requested_data[8192];
         int                     content_length;
         struct stat             infos;
-        int                     fildes[MAX_CLT];
+        int                     fildes[FD_SETSIZE];
+        int                     clients[FD_SETSIZE];
+    
         // Class client {linked list socket, fd};
         char                    buffer[CHUNK_SIZE];
         int                     bytesread, bytessent,videosize, idx;
         fd_set                  readfds, writefds, tmpfdsread, tmpfdswrite;
         int                     maxfds, activity, active_clt;
-        int                     clients[MAX_CLT];
         bool                    client_write_ready;
 
-        
-
-
+    
         // Member Functions
         void Init();
         void Start();
@@ -65,8 +97,13 @@ class Server
         void CreateServer();
     
     private:
-        ServerConfig _config;
-        Handler _handler;
+        ServerConfig                _config;
+        Handler                     _handler;
+        std::list<Client>           _clients;
+        std::list<Client>::iterator it;
+        std::list<Client>::iterator itb;
+        std::list<Client>::iterator ite;
 };
 
 #endif
+

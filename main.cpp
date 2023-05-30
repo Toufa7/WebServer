@@ -7,6 +7,7 @@ int main(int ac, char **av)
 {
     GlobalConfig    configuration;
 
+
     if (ac == 2)
     {
         configuration.ParseConfigFile(av[1]);

@@ -22,3 +22,9 @@ OOP in our Webserver :
   	{
 	// Shared resources such as mime-types map, status codes map or other data structures that are used by multiple parts of the server.
   	}
+
+
+
+# Resources
+
+https://www.gta.ufrj.br/ensino/eel878/sockets/index.html
