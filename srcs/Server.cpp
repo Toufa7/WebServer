@@ -1,20 +1,15 @@
 #include "../includes/Server.hpp"
 
-//  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
-
 void    Error(const char *msg)
 {
     perror(msg);
     exit(1);
 }
 
-
 Server::Server(ServerConfig &config)
 {
     this->_config = config;
 }
-
-
 
 void    Server::Init()
 {
@@ -33,10 +28,8 @@ void    Server::CreateServer()
     setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
     if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
        Error("Error: Binding failed\n");
-    if (listen(server_socket, BACKLOG) == -1)
+    if (listen(server_socket, FD_SETSIZE) == -1)
        Error("Error: Listening failed\n");
-
-
 }
 
 void Server::SendResponseHeader(int clt_skt)
@@ -58,10 +51,8 @@ void Server::Start()
     timeout.tv_sec = 100;
     timeout.tv_usec = 100;
     
-    // Zero the readfds
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
-    // Add the readfds to the set
     FD_SET(server_socket, &readfds);
     FD_SET(server_socket, &writefds);
     maxfds = server_socket;
@@ -89,31 +80,23 @@ void Server::Start()
         for (itb = _clients.begin(); itb != _clients.end(); itb++)
         {
             active_clt = itb->GetCltSocket();
-            // this->_config.setClientSocket(itb->GetCltSocket());
-            // this->_handler.setConfig(this->_config);
-            // this->_handler.ParseRequestHeader(requested_data);
             if (FD_ISSET(active_clt, &tmpfdsread) && !client_write_ready)
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
-                if (bytesreceived == 0)
+                if (bytesreceived <= 0)
                 {
                     close(active_clt);
                     FD_CLR(active_clt, &readfds);
+                    FD_CLR(active_clt, &writefds);
                     _clients.erase(itb);
                     close(itb->GetCltFd());
                     std::cerr << "Connection Closed\n";
                 }
-                else if (bytesreceived < 0)
+                else
                 {
-                    close(active_clt);
-                    FD_CLR(active_clt, &readfds);
-                    _clients.erase(itb);
-                    close(itb->GetCltFd());
-                    Error("Error (Recv) -> ");
-                }
-                else 
+                    client_write_ready = true;
                     SendResponseHeader(active_clt);
-                client_write_ready = true;
+                }
             }
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {

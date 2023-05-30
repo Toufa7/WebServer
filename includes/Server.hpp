@@ -24,7 +24,6 @@
 #define LOCALHOST   "127.0.0.1"
 #define TRUE        1
 #define CRLF        "\r\n"          // The determination of the line 
-#define MAX_CLT     10
 #define CHUNK_SIZE  1024
 
 class Client
@@ -34,7 +33,7 @@ class Client
         int     _socket;
         // bool    is_write_read;
     public:
-        Client();
+        Client() {};
         Client(int socket, int fildes)
         {
             _socket = socket;
@@ -79,8 +78,8 @@ class Server
         char                    requested_data[8192];
         int                     content_length;
         struct stat             infos;
-        int                     fildes[FD_SETSIZE];
-        int                     clients[FD_SETSIZE];
+        // int                     fildes[FD_SETSIZE];
+        // int                     clients[FD_SETSIZE];
     
         // Class client {linked list socket, fd};
         char                    buffer[CHUNK_SIZE];
