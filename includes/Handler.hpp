@@ -50,7 +50,7 @@ class Handler
 		void	redirectionResponse(std::string statusCode, std::string location);
 		std::string generatePageCode(std::string statusCode);
 		std::string generateListDir(std::string statusCode, std::string ls);
-
+		void	GetFileResponse(std::string statusCode, std::string path);
 
 };
 

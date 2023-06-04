@@ -10,57 +10,16 @@ public:
     bool isValid(string s)
     {
         std::stack<char> stk;
-        stk.push(s[0]);
-        int i = 1;
-        while (i < s.length())
-        {
-            if (stk.top() == '{')
-            {
-                if (s[i] == '}')
-                {
-                    stk.pop();
-                    if (i + 1 == s.length())
-                        return (0);
-                }
-                else
-                    stk.push(s[i]);
-            }
-            if (stk.top() == '[')
-            {
-                if (s[i] == ']')
-                {
-                    stk.pop();
-                    if (i + 1 == s.length())
-                        return (0);
-                }
-                else
-                    stk.push(s[i]);
-            }
-            if (stk.top() == '(')
-            {
-                if (s[i] == ')')
-                {
-                    stk.pop();
-                    if (i + 1 == s.length())
-                        return (0);
-                    // continue;
-                }
-                else
-                    stk.push(s[i]);
-            }
-            std::cout << stk.size() << " <- Size\n";
 
-            i++;
+        for (auto it : s)
+        {
+            if (it == '{' || it == '[' || it == '(')
+                stk.push(it);
+            else if (stk.empty() || ((it == ')') && (stk.top() != '(') )|| ((it == ']') && (stk.top() != '[')) || ((it == '}') && (stk.top() != '{')))
+                return (false);
+            else
+                stk.pop();
         }
-        return (stk.empty() ? 0 : 1);
+        return (stk.empty());
     }
 };
-
-int main()
-{
-    Solution A;
-    std::cout << A.isValid("([])");
-}
-
-
-// ebcbbececabbacecbbcbe

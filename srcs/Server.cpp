@@ -58,7 +58,8 @@ int Server::AcceptAddClientToSet()
     int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
     if (newconnection == -1)
         Error("Error (Accept) -> ");
-    _clients.push_back(Client(newconnection, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
+    const char *path = "/Users/otoufah/Desktop/Arsenal.mp4";
+    _clients.push_back(Client(newconnection, open(path, O_RDONLY)));
     client_write_ready = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
     FD_SET(_clients.back().GetCltSocket(), &writefds);
@@ -70,28 +71,24 @@ int Server::AcceptAddClientToSet()
 void Server::Start()
 {
     CreateServer();
-    timeout.tv_sec = 100;
-    timeout.tv_usec = 100;
     
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
     FD_SET(server_socket, &readfds);
     FD_SET(server_socket, &writefds);
     maxfds = server_socket;
-    int bytesreceived = 0;
+    bytesreceived = 0;
 
     while (TRUE)
     {
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
-        activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
+        activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, NULL);
         if (activity == -1)
            Error("Error (Select) -> ");
         if (FD_ISSET(server_socket, &tmpfdsread))
-        {
             client_socket = AcceptAddClientToSet();
-        }
-        // std::cout << "List Size -> " << _clients.size() << "\n";
+        std::cout << "List Size -> " << _clients.size() << "\n";
         for (itb = _clients.begin(); itb != _clients.end(); itb++)
         {
             active_clt = itb->GetCltSocket();
@@ -119,15 +116,9 @@ void Server::Start()
                 bytessent = send(active_clt, buffer, bytesread, 0);
                 if (bytessent == -1)
                     Error("Error (Send) -> ");
-
-                // Dropping the client connection finished
                 if (bytesread == 0)
                 {
-                    close(active_clt);
-                    FD_CLR(active_clt, &readfds);
-                    FD_CLR(active_clt, &writefds);
-                    _clients.erase(itb);
-                    close(itb->GetCltFd());
+                    DropClient();
                     std::cout << "Done With This Client ->" <<  itb->GetCltFd() << "\n";
                 }
             }
