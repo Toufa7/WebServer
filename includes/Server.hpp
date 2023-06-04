@@ -87,13 +87,16 @@ class Server
         fd_set                  readfds, writefds, tmpfdsread, tmpfdswrite;
         int                     maxfds, activity, active_clt;
         bool                    client_write_ready;
+        struct timeval          timeout;
 
     
         // Member Functions
         void Init();
         void Start();
-        void SendResponseHeader(int clt_skt);
+        void DropClient();
         void CreateServer();
+        int  AcceptAddClientToSet();
+        void SendResponseHeader(int clt_skt);
     
     private:
         ServerConfig                _config;

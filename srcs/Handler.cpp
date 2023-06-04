@@ -231,13 +231,13 @@ void Handler::ParseRequestHeader(char *req)
 		value = current_line.substr(delimiter_position + 2, current_line.length()); // [delimiter_position + 2] to remove the extra space before value
 		this->_req_header[key] = value;												// storing key and value in map
 	}
-	printRequstData();
+	// printRequstData();
 	// Validate request content
-	if (!this->validateRequest())
-		return;
+	// if (!this->validateRequest())
+	// 	return;
 	
-	if (this->_method == "GET")
-		this->HandleGet();
+	// if (this->_method == "GET")
+	// 	this->HandleGet();
 //	else if (this->_method == "POST")
 //		this->HandlePost(body);
 //	else if (this->_method == "DELETE")
