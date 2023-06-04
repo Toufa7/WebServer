@@ -42,12 +42,34 @@ void Server::SendResponseHeader(int clt_skt)
         Error("Error (Send) -> ");
 }
 
+void Server::DropClient()
+{
+    close(active_clt);
+    FD_CLR(active_clt, &readfds);
+    FD_CLR(active_clt, &writefds);
+    _clients.erase(itb);
+    close(itb->GetCltFd());
+    std::cerr << "Connection Closed\n";
+}
+
+
+int Server::AcceptAddClientToSet()
+{
+    int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
+    if (newconnection == -1)
+        Error("Error (Accept) -> ");
+    _clients.push_back(Client(newconnection, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
+    client_write_ready = false;
+    FD_SET(_clients.back().GetCltSocket(), &readfds);
+    FD_SET(_clients.back().GetCltSocket(), &writefds);
+    if (_clients.back().GetCltSocket() > maxfds)
+        maxfds = _clients.back().GetCltSocket();
+    return (newconnection);
+}
 
 void Server::Start()
 {
     CreateServer();
-    int maxfds, activity, active_clt;
-    struct timeval timeout;
     timeout.tv_sec = 100;
     timeout.tv_usec = 100;
     
@@ -60,7 +82,6 @@ void Server::Start()
 
     while (TRUE)
     {
-        // GetRequest();
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
         activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
@@ -68,15 +89,9 @@ void Server::Start()
            Error("Error (Select) -> ");
         if (FD_ISSET(server_socket, &tmpfdsread))
         {
-            if ((client_socket = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr)) == -1)
-               Error("Error (Accept) -> ");            
-            _clients.push_back(Client(client_socket, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
-                client_write_ready = false;
-            FD_SET(_clients.back().GetCltSocket(), &readfds);
-            FD_SET(_clients.back().GetCltSocket(), &writefds);
-            if (_clients.back().GetCltSocket() > maxfds)
-                maxfds = _clients.back().GetCltSocket();
+            client_socket = AcceptAddClientToSet();
         }
+        // std::cout << "List Size -> " << _clients.size() << "\n";
         for (itb = _clients.begin(); itb != _clients.end(); itb++)
         {
             active_clt = itb->GetCltSocket();
@@ -85,11 +100,7 @@ void Server::Start()
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
                 if (bytesreceived <= 0)
                 {
-                    close(active_clt);
-                    FD_CLR(active_clt, &readfds);
-                    FD_CLR(active_clt, &writefds);
-                    _clients.erase(itb);
-                    close(itb->GetCltFd());
+                    DropClient();
                     std::cerr << "Connection Closed\n";
                 }
                 else
@@ -98,14 +109,27 @@ void Server::Start()
                     SendResponseHeader(active_clt);
                 }
             }
+
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {
                 bytesread = read(itb->GetCltFd(), buffer, sizeof(buffer));
+                // _handler.ParseRequestHeader(buffer);
                 if (bytesread == -1)
                     Error("Error (Read) -> ");
                 bytessent = send(active_clt, buffer, bytesread, 0);
                 if (bytessent == -1)
                     Error("Error (Send) -> ");
+
+                // Dropping the client connection finished
+                if (bytesread == 0)
+                {
+                    close(active_clt);
+                    FD_CLR(active_clt, &readfds);
+                    FD_CLR(active_clt, &writefds);
+                    _clients.erase(itb);
+                    close(itb->GetCltFd());
+                    std::cout << "Done With This Client ->" <<  itb->GetCltFd() << "\n";
+                }
             }
         }
     }
