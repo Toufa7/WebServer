@@ -2,17 +2,11 @@
 #include "includes/Handler.hpp"
 #include "includes/Config.hpp"
 
-
 int main(int ac, char **av)
 {
     GlobalConfig    configuration;
 
-    // if (ac == 1)
-    // {
-        // configuration.ParseConfigFile("./conf/file.conf");
-        // Server          WebServer(configuration.GetServersVector()[0]);
-        // WebServer.Start();
-    // }
+    // Missing Config : Add Default Config 
     if (ac == 2)
     {
         configuration.ParseConfigFile(av[1]);

@@ -12,7 +12,7 @@ int main()
     if  (file.is_open())
     {
         while (std::getline(file, input))
-            std::cout << input << "\n";
+            std::cout << input;
     }
     else
         std::cerr << "Cannot Open\n";

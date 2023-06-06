@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <signal.h>
 #include <sys/stat.h>
 #include <fstream>
 
@@ -28,10 +29,20 @@
 #define CHUNK_SIZE  1024
 
 // Setuping and startig the server : Creating socket -> binding -> listening (Handling multiple clients)
+
+
 class Server
 {
+    private:
+        ServerConfig                _config;
+        Handler                     _handler;
+        std::list<Client>           _clients;
+        std::list<Client>::iterator it;
+        std::list<Client>::iterator itb;
+        std::list<Client>::iterator ite;
+
     public:
-        Server();
+        Server(){};
         Server(ServerConfig &config);
         // Server Init
         int                     server_socket; // The server listen on this socket
@@ -44,7 +55,7 @@ class Server
         size_t                  msg_received;
 
         // Multiplexing
-        char                    requested_data[8192];
+        char                    requested_data[CHUNK_SIZE];
         int                     content_length;
         struct stat             infos;
     
@@ -59,20 +70,14 @@ class Server
 
     
         // Member Functions
-        void Init();
-        void Start();
-        void DropClient();
-        void CreateServer();
-        int  AcceptAddClientToSet();
-        void SendResponseHeader(int clt_skt);
-    
-    private:
-        ServerConfig                _config;
-        Handler                     _handler;
-        std::list<Client>           _clients;
-        std::list<Client>::iterator it;
-        std::list<Client>::iterator itb;
-        std::list<Client>::iterator ite;
+        void    Init();
+        void    Start();
+        void    DropClient();
+        void    ReadAndSend();
+        void    CreateServer();
+        void    SelectSetsInit();
+        int     AcceptAddClientToSet();
+        void    SendResponseHeader(int clt_skt);
 };
 
 #endif

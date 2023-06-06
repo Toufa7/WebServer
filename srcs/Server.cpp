@@ -3,7 +3,7 @@
 void    Error(const char *msg)
 {
     perror(msg);
-    exit(1);
+    // exit(1);
 }
 
 Server::Server(ServerConfig &config)
@@ -34,7 +34,7 @@ void    Server::CreateServer()
 
 void Server::SendResponseHeader(int clt_skt)
 {
-    char response_header[100] = "HTTP/1.1 200 OK\r\n"
+    char response_header[] = "HTTP/1.1 200 OK\r\n"
                                 "Server: Allah Y7ssen L3wan\r\n"
                                 "Content-Length: 82013359\r\n"
                                 "Content-Type: video/mp4\r\n\r\n";
@@ -49,17 +49,15 @@ void Server::DropClient()
     FD_CLR(active_clt, &writefds);
     _clients.erase(itb);
     close(itb->GetCltFd());
-    std::cerr << "Connection Closed\n";
 }
-
 
 int Server::AcceptAddClientToSet()
 {
     int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
+    fcntl(newconnection, F_SETFL, O_NONBLOCK);
     if (newconnection == -1)
         Error("Error (Accept) -> ");
-    const char *path = "/Users/otoufah/Desktop/Arsenal.mp4";
-    _clients.push_back(Client(newconnection, open(path, O_RDONLY)));
+    _clients.push_back(Client(newconnection, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
     client_write_ready = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
     FD_SET(_clients.back().GetCltSocket(), &writefds);
@@ -68,37 +66,70 @@ int Server::AcceptAddClientToSet()
     return (newconnection);
 }
 
-void Server::Start()
+
+void    Server::ReadAndSend()
 {
-    CreateServer();
+    // Continue running even if the write/send operation fails due to a closed/invalid socket
+    // signal(SIGPIPE, SIG_IGN);
+    bytesread = read(itb->GetCltFd(), buffer, sizeof(buffer));
+    if (bytesread == -1)
+        Error("Error (Read) -> ");
+    bytessent = send(active_clt, buffer, bytesread, 0);
+    if (bytessent == -1)
+    {
+        DropClient();
+        Error("Error (Send) -> ");
+    }
+    if (bytessent == 0 || bytesread == 0)
+    {
+        DropClient();
+    }
+}
+
+void Server::SelectSetsInit()
+{
+    timeout.tv_sec  = 100;
+    timeout.tv_usec = 100;
     
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
     FD_SET(server_socket, &readfds);
     FD_SET(server_socket, &writefds);
     maxfds = server_socket;
+}
+
+
+void Server::Start()
+{
+    CreateServer();
+    SelectSetsInit();
     bytesreceived = 0;
 
     while (TRUE)
     {
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
-        activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, NULL);
+        activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
         if (activity == -1)
            Error("Error (Select) -> ");
         if (FD_ISSET(server_socket, &tmpfdsread))
+        {
             client_socket = AcceptAddClientToSet();
-        std::cout << "List Size -> " << _clients.size() << "\n";
+        }
+
+        // std::cout << "List Size -> " << _clients.size() << "\n";
+
         for (itb = _clients.begin(); itb != _clients.end(); itb++)
         {
             active_clt = itb->GetCltSocket();
-            if (FD_ISSET(active_clt, &tmpfdsread) && !client_write_ready)
+            if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
-                if (bytesreceived <= 0)
+                if (bytesreceived < 1)
                 {
+                    std::cerr << "Recv (-1) : Connection Closed -> " << active_clt << std::endl;
                     DropClient();
-                    std::cerr << "Connection Closed\n";
+                    continue;
                 }
                 else
                 {
@@ -109,18 +140,7 @@ void Server::Start()
 
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {
-                bytesread = read(itb->GetCltFd(), buffer, sizeof(buffer));
-                // _handler.ParseRequestHeader(buffer);
-                if (bytesread == -1)
-                    Error("Error (Read) -> ");
-                bytessent = send(active_clt, buffer, bytesread, 0);
-                if (bytessent == -1)
-                    Error("Error (Send) -> ");
-                if (bytesread == 0)
-                {
-                    DropClient();
-                    std::cout << "Done With This Client ->" <<  itb->GetCltFd() << "\n";
-                }
+                ReadAndSend();
             }
         }
     }

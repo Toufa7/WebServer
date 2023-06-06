@@ -42,7 +42,7 @@ void Handler::printRequstData()
 
 std::string Handler::generatePageCode(std::string statusCode)
 {
-	std::ifstream file("smaples/errorPageSample.html");
+	std::ifstream file("samples/errorPageSample.html");
 	std::string statusMessage = this->_shared.status_codes[statusCode];
 	std::string res = "<html><head><title>" + statusCode + " " + statusMessage + "</title></head>"
 	"<body><h1>" + statusCode + " " + statusMessage + "</h1></body></html>";

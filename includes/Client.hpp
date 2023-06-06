@@ -8,6 +8,7 @@ class Client
         int     _fd;
         int     _socket;
     public:
+        // Constructor
         Client() {};
         Client(int socket, int fildes)
         {
@@ -18,14 +19,9 @@ class Client
         {
             _socket = socket;
         }
-
         int GetCltFd()
         {
             return (this->_fd);
-        }
-        void SetSocket(int val)
-        {
-            this->_socket = val;
         }
         int GetCltSocket()
         {
