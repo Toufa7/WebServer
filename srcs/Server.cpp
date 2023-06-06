@@ -56,6 +56,7 @@ void Server::DropClient()
 int Server::AcceptAddClientToSet()
 {
     int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
+    fcntl(newconnection, F_SETFL, O_NONBLOCK);
     if (newconnection == -1)
         Error("Error (Accept) -> ");
     _clients.push_back(Client(newconnection, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
@@ -112,6 +113,8 @@ void Server::Start()
 
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {
+                // Continue running even if the write/send operation fails due to a closed/invalid socket
+                signal(SIGPIPE, SIG_IGN);
                 bytesread = read(itb->GetCltFd(), buffer, sizeof(buffer));
                 // _handler.ParseRequestHeader(buffer);
                 if (bytesread == -1)
