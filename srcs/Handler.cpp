@@ -208,8 +208,8 @@ std::string Handler::GetMimeType()
 
 void Handler::ParseRequestHeader(char *req)
 {
-	std::cout << "-> " << req << std::endl;
-	exit(0);
+// 	std::cout << "-> " << req << std::endl;
+// 	exit(0);
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
