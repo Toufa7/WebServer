@@ -7,8 +7,10 @@
 
 void DeleteFile(const char *path)
 {
-    std::cout << path << ": File deleted successfully" << std::endl;
-    unlink(path);
+    if (unlink(path) == 0)
+        std::cout << path << ": File deleted successfully" << std::endl;
+    else
+           perror("Unlink -> ");
 }
 
 void    DeleteDirectory(const char *path)
