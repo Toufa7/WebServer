@@ -11,7 +11,6 @@
 
 std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
 {
-	std::cout << "am been called 90" << "\n";
 	std::string MatchedUri;
 	if (uri.find(locationPath) != std::string::npos)
 		MatchedUri = uri.replace(0, locationPath.length(), root);
@@ -600,12 +599,49 @@ void Handler::HandleDelete()
 	std::string path;
 
 	path = GetRootLocation(_uri, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+
+
 	if (stat(path.c_str(), &file) == 0)
 	{
 		if (S_ISREG(file.st_mode))
-			DeleteFile(path.c_str());
+		{
+			if (this->_config.GetCgiInfo().type == "n/a")
+			{
+				DeleteFile(path.c_str());
+				sendResponseHeader("204", ".html", "", file.st_size);
+				// No CGI
+			}
+			else
+			{
+				// Run CGI
+			}
+		}
 		else if (S_ISDIR(file.st_mode))
-			DeleteDirectory(path.c_str());
+		{
+			if (path[path.size() - 1] == '/')
+			{
+				if (this->_config.GetCgiInfo().type == "n/a")
+				{
+					DeleteDirectory(path.c_str());
+					sendResponseHeader("204", ".html", "", file.st_size);
+					// No Cgi
+				}
+				else
+				{
+					//  Check on index file validation
+					// if (check index file)
+						// Run CGI
+					// else
+					// {
+					// 	sendErrorResponse("403");
+					// }
+				}
+			}
+			else
+			{
+				sendErrorResponse("409");
+			}
+		}
 	}
 	else
 		std::cerr << "File or Directory doesn't exist :(" << std::endl;

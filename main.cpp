@@ -21,7 +21,6 @@ int main(int ac, char **av)
     {
         configuration.ParseConfigFile(av[1]);
 
-
         for (size_t i = 0; i < configuration.GetServersVector().size(); i++)
         {
             Server          WebServer(configuration.GetServersVector()[i]);

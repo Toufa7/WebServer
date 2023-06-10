@@ -127,23 +127,15 @@ void Server::Start()
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
-                // this->_handler.parseRequestHeader(requested_data);
-
-                // Checking incase of of invalid request 
-
                 if (bytesreceived < 1)
                 {
                     std::cerr << "Recv (-1) : Connection Closed -> " << active_clt << std::endl;
                     DropClient();
                     continue;
                 }
-                
                 else
                 {
                     client_write_ready = true;
-                //     std::string head = itb->_client_hanlder.generateResponseHeader("200", ".mp4", "", 96953870);
-                //     if (send(active_clt, head.c_str(), head.length(), 0) == -1)
-                //         Error("Error (Send) -> ");
                 }
             }
 
@@ -151,11 +143,6 @@ void Server::Start()
             {
                 itb->_client_hanlder.setConfig(this->_config);
                 itb->_client_hanlder.Driver(requested_data);
-            //     if (this->_handler.getRequestMethod() == "GET")
-            //     {
-            //     	this->_handler.HandleGet(flag);
-            //     }
-                // ReadAndSend();
             }
             flag++;
         }
