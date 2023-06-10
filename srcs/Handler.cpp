@@ -168,6 +168,8 @@ std::string Handler::getMimeType()
 	return ("text/html");
 }
 
+// -------------------------------- Request parse and validation ------------
+
 void Handler::parseRequestHeader(char *req)
 {
 	// 	std::cout << "-> " << req << std::endl;
@@ -319,6 +321,8 @@ bool Handler::validateURI(const std::string &uri)
 	return true;
 }
 
+// -------------------------------- POST method ----------------------
+
 void Handler::HandlePost(char *body)
 {
 	(void)body;
@@ -363,6 +367,38 @@ void Handler::HandlePost(char *body)
 		}
 	}
 	this->sendFileResponse("200", "test/homepage.html");
+}
+
+// -------------------------------- GET method ----------------------
+
+// Send a respone with [statusCode] in the header and content of the file in [path] as body
+void Handler::sendFileResponse(std::string statusCode, std::string path)
+{
+	std::string fileExt, content, response;
+
+	fileExt = path.substr(path.find_last_of('.'), path.length());
+	std::ifstream file(path.c_str());
+	std::stringstream buffer;
+	if (file)
+	{
+		buffer << file.rdbuf();
+		content = buffer.str();
+		file.close();
+	}
+	else
+	{
+		this->sendErrorResponse("500");
+		return;
+	}
+
+	response = generateResponseHeader(statusCode, fileExt, "", content.length());
+	response += content;
+
+	if (send(this->_config.getClientSocket(), response.c_str(), response.length(), 0) == -1)
+	{
+		std::cerr << "Error : Sending failed\n";
+		exit(1);
+	}
 }
 
 void Handler::HandleGet()
@@ -458,36 +494,81 @@ void Handler::HandleGet()
 	// this->sendFileResponse("200", "test/homepage.html");
 }
 
-// Send a respone with [statusCode] in the header and content of the file in [path] as body
-void Handler::sendFileResponse(std::string statusCode, std::string path)
+// -------------------------------- Delete method ----------------------
+
+void	Handler::DeleteDirectory(const char *path)
 {
-	std::string fileExt, content, response;
+    static int i = 0;
+    i++;
+    std::cout << i << std::endl;
+    DIR             *directory;
+    struct dirent   *dir;
+    struct stat     file;
+    char            subdir[256];
 
-	fileExt = path.substr(path.find_last_of('.'), path.length());
-	std::ifstream file(path.c_str());
-	std::stringstream buffer;
-	if (file)
-	{
-		buffer << file.rdbuf();
-		content = buffer.str();
-		file.close();
-	}
-	else
-	{
-		this->sendErrorResponse("500");
-		return;
-	}
-	response = generateResponseHeader(statusCode, fileExt, "", content.length());
-	response += content;
+    // open a directory
+    if ((directory = opendir(path)) == NULL)
+    {
+        std::cerr << "Cannot Open Directory: " << path << std::endl;
+        return ;
+    }
+    // read the contents of the directory
+    while ((dir = readdir(directory)) != NULL)
+    {
+        if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
+            continue;
+        snprintf(subdir, sizeof(subdir), "%s/%s", path, dir->d_name);
+        if (stat(subdir, &file) == 0)
+        {
+            if (S_ISREG(file.st_mode))
+            {
+                std::cout << "File -> " << subdir << std::endl;
+                DeleteFile(subdir);
+            }
+            else if (S_ISDIR(file.st_mode))
+            {
+                std::cout << "Dir -> " << subdir << std::endl;
+                DeleteDirectory(subdir);
+            }
+        }
+        else
+        {
+            std::cerr << "Error getting file or directory " << subdir << std::endl;
+        }
+    }
+    closedir(directory);
+    std::cout << "Path -> " << path << std::endl;
+    if (rmdir(path) == 0)
+    {
+        std::cout << path << ": Directory deleted successfully" << std::endl;
+    }
+    else
+    {
+        std::cerr << "Error deleting directory " << path << std::endl;
+    }
+}
 
-	if (send(this->_config.getClientSocket(), response.c_str(), response.length(), 0) == -1)
-	{
-		std::cerr << "Error : Sending failed\n";
-		exit(1);
-	}
+void	Handler::DeleteFile(const char *path)
+{
+    if (unlink(path) == 0)
+        std::cout << path << ": File deleted successfully" << std::endl;
+    else
+           perror("Unlink -> ");
 }
 
 void Handler::HandleDelete()
 {
-	this->sendFileResponse("200", "test/homepage.html");
+    const char  *path;
+    struct stat file;
+
+    path = "";
+    if (stat(path, &file) == 0)
+    {
+        if (S_ISREG(file.st_mode))
+            DeleteFile(path);
+        else if (S_ISDIR(file.st_mode))
+            DeleteDirectory(path);
+    }
+    else
+        std::cerr << "File or Directory doesn't exist :(" << std::endl;
 }
