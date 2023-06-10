@@ -5,13 +5,13 @@
 //  ------------- ACCESSOR --------------------
 
 // Request method getter
-std::string Handler::GetRequestMethod()
+std::string Handler::getRequestMethod()
 {
 	return (this->_method);
 }
 
 // Request path getter
-std::string Handler::GetRequestURI()
+std::string Handler::getRequestURI()
 {
 	return (this->_uri);
 }
@@ -21,7 +21,7 @@ void Handler::setConfig(ServerConfig &config)
 	this->_config = config;
 }
 
-int	Handler::WorkingLocationIndex(void)
+int Handler::getWorkingLocationIndex()
 {
 	return _WorkingLocationIndex;
 }
@@ -40,33 +40,36 @@ void Handler::printRequstData()
 	}
 }
 
-std::string Handler::generatePageCode(std::string statusCode)
+// Generate a response header from the recieved argements
+std::string Handler::generateResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
 {
-	std::ifstream file("samples/errorPageSample.html");
-	std::string statusMessage = this->_shared.status_codes[statusCode];
-	std::string res = "<html><head><title>" + statusCode + " " + statusMessage + "</title></head>"
-	"<body><h1>" + statusCode + " " + statusMessage + "</h1></body></html>";
-	std::stringstream buffer;
-	if (file)
-	{
-		buffer << file.rdbuf();
-		file.close();
-		res = buffer.str();
-		res.insert(res.find("<title><") + 7, statusCode + " - " + statusMessage);
-		res.insert(res.find("<h1><") + 4, statusCode + " - " + statusMessage);
-	}
-	return res;
+	std::stringstream header;
+
+	header << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
+	header << "Server: " << this->_config.GetServerNames() << "\r\n";
+
+	if (!location.empty())
+		header << "Location: " << location << "\r\n";
+	if (!fileExt.empty())
+		header << "Content-Type: " << this->_shared.mime_types[fileExt] << "\r\n";
+	if (contentLength)
+		header << "Content-Length: " << contentLength << "\r\n";
+
+	header << "Connection: close\r\n";
+	header << "\r\n";
+
+	return header.str();
 }
 
 std::string Handler::generateListDir(std::string statusCode, std::string ls)
 {
-	//5asek tcheki wach ls 3amra wla 5awya
+	// 5asek tcheki wach ls 3amra wla 5awya
 	std::stringstream s(ls);
 	std::string statusMessage = this->_shared.status_codes[statusCode];
 	std::string TmpStr, res = "<html><head><title>Directory list</title></head><body><h1><ul>";
-	while (std::getline(s, TmpStr,'\n'))
+	while (std::getline(s, TmpStr, '\n'))
 	{
-		if ( TmpStr != ".." )
+		if (TmpStr != "..")
 		{
 			res += "<li><a href=\"";
 			res += TmpStr;
@@ -79,114 +82,73 @@ std::string Handler::generateListDir(std::string statusCode, std::string ls)
 	return res;
 }
 
-void Handler::codeResponse(std::string statusCode)
+void Handler::sendErrorResponse(std::string statusCode)
 {
-	std::stringstream response;
 	std::string htmlContent;
 
 	// Check for this error page in the server config
 	if (this->_config._ErrorPageMap.find(statusCode) != this->_config._ErrorPageMap.end())
 	{
 		std::ifstream file(this->_config._ErrorPageMap[statusCode].c_str());
-		std::stringstream buffer;
 		if (file)
 		{
+			std::stringstream buffer;
 			buffer << file.rdbuf();
 			htmlContent = buffer.str();
 			file.close();
 		}
-		else
-			htmlContent = this->generatePageCode(statusCode);
 	}
-	else
-		htmlContent = this->generatePageCode(statusCode);
-
-	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
-	response << "Server: " << this->_config.GetServerNames() << "\r\n";
-	response << "Content-Type: text/html\r\n";
-	response << "Content-Length: " << htmlContent.length() << "\r\n";
-	response << "Connection: close\r\n";
-	response << "\r\n";
-	response << htmlContent;
-
-	if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+	if (htmlContent.empty())
 	{
-		std::cerr << "Error : Sending failed\n";
-		exit(1);
+		std::ifstream file("samples/errorPageSample.html");
+		std::string statusMessage = this->_shared.status_codes[statusCode];
+		std::string res = "<html><head><title>" + statusCode + " " + statusMessage + "</title></head>" + "<body><h1>" +
+						  statusCode + " " + statusMessage + "</h1></body></html>";
+		if (file)
+		{
+			std::stringstream buffer;
+			buffer << file.rdbuf();
+			file.close();
+			res = buffer.str();
+			res.insert(res.find("<title><") + 7, statusCode + " - " + statusMessage);
+			res.insert(res.find("<h1><") + 4, statusCode + " - " + statusMessage);
+		}
+		htmlContent = res;
 	}
-	std::cout << "\n---------------------- error response --------------------- " << std::endl;
-	std::cout << response.str() << std::endl;
+	this->sendHtmlResponse(statusCode, htmlContent);
 }
 
-void Handler::getcodeResponse(std::string statusCode, std::string htmlContent)
+// this function take a status code and htmlcontent and send a response with it
+void Handler::sendHtmlResponse(std::string statusCode, std::string htmlContent)
 {
-	std::stringstream response;
+	std::string response;
 
-	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
-	response << "Server: " << this->_config.GetServerNames() << "\r\n";
-	response << "Content-Type: text/html\r\n";
-	response << "Content-Length: " << htmlContent.length() << "\r\n";
-	response << "Connection: close\r\n";
-	response << "\r\n";
-	response << htmlContent;
+	response = generateResponseHeader(statusCode, ".html", "", htmlContent.length());
+	response += htmlContent;
 
-	if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+	if (send(this->_config.getClientSocket(), response.c_str(), response.length(), 0) == -1)
 	{
 		std::cerr << "Error : Sending failed\n";
 		exit(1);
 	}
-	// std::cout << "\n---------------------- [getcodeResponse()] error response --------------------- " << std::endl;
-	// std::cout << response.str() << std::endl;
+	// std::cout << "\n---------------------- [sendHtmlResponse()] error response --------------------- " << std::endl;
+	// std::cout << response << std::endl;
 }
 
-void	Handler::redirectionResponse(std::string statusCode, std::string location)
+void Handler::redirectionResponse(std::string statusCode, std::string location)
 {
-	std::stringstream response;
+	std::string response = generateResponseHeader(statusCode, "", location, 0);
 
-	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
-	response << "Location: " << location << "\r\n";
-	response << "Server: " << this->_config.GetServerNames() << "\r\n";
-	response << "Connection: close\r\n";
-	response << "\r\n";
-
-	if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+	if (send(this->_config.getClientSocket(), response.c_str(), response.length(), 0) == -1)
 	{
 		std::cerr << "Error : Sending failed\n";
 		exit(1);
 	}
-	std::cout << "\n---------------------- redirection response --------------------- " << std::endl;
-	std::cout << response.str() << std::endl;
+	// std::cout << "\n---------------------- redirection response --------------------- " << std::endl;
+	// std::cout << response << std::endl;
 }
 
-void Handler::fileResponse(std::string path, std::string statusCode)
-{
-	std::stringstream response;
-	std::stringstream body;
-	std::ifstream file(path);
-
-	if (!file)
-	{
-		codeResponse("500");
-		return;
-	}
-	body << file.rdbuf();
-	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
-	response << "Server: " << this->_config.GetServerNames() << "\r\n";
-	response << "Content-Type: text/html\r\n";
-	response << "Content-Length: " << body.str().length() << "\r\n";
-	response << "Connection: close\r\n";
-	response << "\r\n";
-	response << body.str();
-	if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
-	{
-		std::cerr << "Error : Sending failed\n";
-		exit(1);
-	}
-	std::cout << "\n---------------------- file response --------------------- " << std::endl;
-	std::cout << response.str() << std::endl;
-}
-
-std::string Handler::GetMimeType()
+std::string Handler::getMimeType()
 {
 	Shared mime_map;
 	int dot_position;
@@ -206,10 +168,10 @@ std::string Handler::GetMimeType()
 	return ("text/html");
 }
 
-void Handler::ParseRequestHeader(char *req)
+void Handler::parseRequestHeader(char *req)
 {
-// 	std::cout << "-> " << req << std::endl;
-// 	exit(0);
+	// 	std::cout << "-> " << req << std::endl;
+	// 	exit(0);
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
@@ -236,13 +198,14 @@ void Handler::ParseRequestHeader(char *req)
 	// Validate request content
 	// if (!this->validateRequest())
 	// 	return;
-	
+
 	// if (this->_method == "GET")
 	// 	this->HandleGet();
-//	else if (this->_method == "POST")
-//		this->HandlePost(body);
-//	else if (this->_method == "DELETE")
-//		this->HandleDelete();
+	//	else if (this->_method == "POST")
+	//		this->HandlePost(body);
+	//	else if (this->_method == "DELETE")
+	//		this->HandleDelete();
+	(void)body;
 }
 
 // Check for Possible error in the Request
@@ -251,33 +214,33 @@ bool Handler::validateRequest()
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
 	{
-		this->codeResponse("501");
+		this->sendErrorResponse("501");
 		return false;
 	}
 	// if both Transfer-Encoding and Content-Length not provided
 	if (this->_method == "POST" && this->_req_header.find("Transfer-Encoding") == this->_req_header.end() &&
 		this->_req_header.find("Content-Length") == this->_req_header.end())
 	{
-		this->codeResponse("400");
+		this->sendErrorResponse("400");
 		return false;
 	}
 	// URI should start with a leading slash ("/") and not contain any illegal characters
 	if (!this->validateURI(this->_uri))
 	{
-		this->codeResponse("400");
+		this->sendErrorResponse("400");
 		return false;
 	}
 	//  URI should not have more than 2048
 	if (this->_uri.length() > 2048)
 	{
-		this->codeResponse("414");
+		this->sendErrorResponse("414");
 		return false;
 	}
 	//  Request body size should not be more than [client_body_size] from confing file
 	if (this->_req_header.find("Content-Length") != this->_req_header.end() &&
 		std::stoll(this->_req_header["Content-Length"]) > std::stoll(this->_config.GetClientBodySize()))
 	{
-		this->codeResponse("413");
+		this->sendErrorResponse("413");
 		return false;
 	}
 	return this->matchLocation();
@@ -295,26 +258,25 @@ bool Handler::matchLocation()
 	if (this->_uri.find('?') != std::string::npos)
 		path = this->_uri.substr(0, this->_uri.find('?'));
 
-	//find the closest location to requested resource
+	// find the closest location to requested resource
 	for (i = 0; i < serverLocations.size(); i++)
 	{
 		tmp_index = path.find(serverLocations[i].GetLocationPath());
 		if (tmp_index != -1)
 		{
-			if (serverLocations[i].GetLocationPath() == "/")//saving '/' location
-				root_location = i; 
-			if ((path[0] == '/') && (path.length() == 1))// case of '/' only
+			if (serverLocations[i].GetLocationPath() == "/") // saving '/' location
+				root_location = i;
+			if ((path[0] == '/') && (path.length() == 1)) // case of '/' only
 				_WorkingLocationIndex = i;
-			if (serverLocations[i].GetLocationPath().length() > old_size)//case of closest valid location
+			if (serverLocations[i].GetLocationPath().length() > old_size) // case of closest valid location
 			{
 				old_size = serverLocations[i].GetLocationPath().length();
-                _WorkingLocationIndex = i;
+				_WorkingLocationIndex = i;
 			}
-			if ((path[0] == '/') && (i == serverLocations.size()) && old_size == 0)//case of '/not_valid'
-                _WorkingLocationIndex = root_location;
+			if ((path[0] == '/') && (i == serverLocations.size()) && old_size == 0) // case of '/not_valid'
+				_WorkingLocationIndex = root_location;
 		}
 	}
-
 
 	if (serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionFlag)
 	{
@@ -327,16 +289,16 @@ bool Handler::matchLocation()
 	std::vector<std::string> allowedMethods = serverLocations[_WorkingLocationIndex].GetAllowedMethodsVec();
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
 	{
-		this->codeResponse("405");
+		this->sendErrorResponse("405");
 		return false;
 	}
 	// Check for location redirection
 
-	//based on new design, path will be checked ferther in every method for validity
-	
+	// based on new design, path will be checked ferther in every method for validity
+
 	// if (i == serverLocations.size())
 	// {
-	// 	this->codeResponse("404");
+	// 	this->sendErrorResponse("404");
 	// 	return false;
 	// }
 
@@ -400,36 +362,36 @@ void Handler::HandlePost(char *body)
 			// File saved successfully
 		}
 	}
-	fileResponse("test/homepage.html", "200");
+	this->sendFileResponse("200", "test/homepage.html");
 }
 
 void Handler::HandleGet()
 {
-	int			RepStrPos;
-    size_t      i = 0;
-    std::string	RealPath, tmp_str, DirStr, UriInit;
-	struct stat	s, t;
+	int RepStrPos;
+	size_t i = 0;
+	std::string RealPath, tmp_str, DirStr, UriInit;
+	struct stat s, t;
 
-	//std::cout << "_uri get() -->" << _uri << "<--\n";
+	// std::cout << "_uri get() -->" << _uri << "<--\n";
 	UriInit = _uri;
 	RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
-    if (RepStrPos < 0)
+	if (RepStrPos < 0)
 	{
 		std::cout << "I entred here\n";
-        this->codeResponse("404");
+		this->sendErrorResponse("404");
 	}
-    else
-        _uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
-	//std::cout << "_uri get() 000>" << _uri << "<000\n";
-	
-	if (stat(_uri.c_str(),&s) == 0)
+	else
+		_uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+	// std::cout << "_uri get() 000>" << _uri << "<000\n";
+
+	if (stat(_uri.c_str(), &s) == 0)
 	{
 		/*------------------------------------------- DIR Handler ----------------------------------------------------*/
-    	if ( s.st_mode & S_IFDIR )
-    	{
+		if (s.st_mode & S_IFDIR)
+		{
 			if (_uri[_uri.size() - 1] != '/')
-                _uri += '/';
-            if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetIndexesVec().empty() == 0)//identify the working index
+				_uri += '/';
+			if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetIndexesVec().empty() == 0) // identify the working index
 			{
 				for (i = 0; i < this->_config.GetLocationsVec()[_WorkingLocationIndex].GetIndexesVec().size(); i++)
 				{
@@ -442,83 +404,83 @@ void Handler::HandleGet()
 			}
 			if (tmp_str.empty() == 0)
 			{
-				//case of valid index file so you shuold handle cgi or not
+				// case of valid index file so you shuold handle cgi or not
 			}
 			else
 			{
-				//case of no index file and should check auto index:handled
-                if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetAutoIndex() == 1)
-                {
-                    DIR *DirPtr;
-                    struct dirent *Dir;
-                    DirPtr = opendir(_uri.c_str());
-                    if (DirPtr)
-                    {
+				// case of no index file and should check auto index:handled
+				if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetAutoIndex() == 1)
+				{
+					DIR *DirPtr;
+					struct dirent *Dir;
+					DirPtr = opendir(_uri.c_str());
+					if (DirPtr)
+					{
 						std::string IfDir = UriInit;
 						if (IfDir[IfDir.length() - 1] != '/')
 							IfDir += '/';
-                        while ((Dir = readdir (DirPtr)) != NULL)
+						while ((Dir = readdir(DirPtr)) != NULL)
 						{
 							DirStr += IfDir;
 							DirStr += Dir->d_name;
 							DirStr += '\n';
 						}
-                        closedir(DirPtr);
-                    }
-                    if (DirStr.empty() == 0)
-                        this->getcodeResponse("200", generateListDir("200", DirStr));
-						//addi hna l function li radi t handli l auto indexing
-                }
-                else
-                    this->codeResponse("403");//case of no index file and no index file:handled
-            }
-    	}
+						closedir(DirPtr);
+					}
+					if (DirStr.empty() == 0)
+						this->sendHtmlResponse("200", generateListDir("200", DirStr));
+					// addi hna l function li radi t handli l auto indexing
+				}
+				else
+					this->sendErrorResponse("403"); // case of no index file and no index file:handled
+			}
+		}
 		/*------------------------------------------- DIR Handler end ------------------------------------------------*/
 
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
-    	else if( s.st_mode & S_IFREG )
-    	{
+		else if (s.st_mode & S_IFREG)
+		{
 			if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetCgiInfo().path != "n/a")
 			{
-				//handle file cgi
+				// handle file cgi
 			}
 			else
 			{
-				//part flag
+				// part flag
 				std::cout << "File size is :" << s.st_size << "\n";
-				GetFileResponse("200", this->_uri);
+				this->sendFileResponse("200", this->_uri);
 			}
-    	}
+		}
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 	}
 	else
-        this->codeResponse("404");
-	//fileResponse("test/homepage.html", "200");
+		this->sendErrorResponse("404");
+	// this->sendFileResponse("200", "test/homepage.html");
 }
 
-void Handler::GetFileResponse(std::string statusCode, std::string path)
+// Send a respone with [statusCode] in the header and content of the file in [path] as body
+void Handler::sendFileResponse(std::string statusCode, std::string path)
 {
-	std::stringstream response;
-	std::string FileExtention, htmlContent;
+	std::string fileExt, content, response;
 
-	FileExtention = path.substr(path.find_last_of('.'), path.length());
+	fileExt = path.substr(path.find_last_of('.'), path.length());
 	std::ifstream file(path.c_str());
 	std::stringstream buffer;
 	if (file)
 	{
 		buffer << file.rdbuf();
-		htmlContent = buffer.str();
+		content = buffer.str();
 		file.close();
 	}
-	response << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
-	response << "Server: " << this->_config.GetServerNames() << "\r\n";
-	response << "Content-Type: " << this->_shared.mime_types[FileExtention] << "\r\n";
-	response << "Content-Length: " << htmlContent.length() << "\r\n";
-	response << "Connection: close\r\n";
-	response << "\r\n";
-	response << htmlContent;
+	else
+	{
+		this->sendErrorResponse("500");
+		return;
+	}
+	response = generateResponseHeader(statusCode, fileExt, "", content.length());
+	response += content;
 
-	if (send(this->_config.getClientSocket(), response.str().c_str(), response.str().length(), 0) == -1)
+	if (send(this->_config.getClientSocket(), response.c_str(), response.length(), 0) == -1)
 	{
 		std::cerr << "Error : Sending failed\n";
 		exit(1);
@@ -527,5 +489,5 @@ void Handler::GetFileResponse(std::string statusCode, std::string path)
 
 void Handler::HandleDelete()
 {
-	fileResponse("test/homepage.html", "200");
+	this->sendFileResponse("200", "test/homepage.html");
 }

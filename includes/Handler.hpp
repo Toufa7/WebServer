@@ -18,39 +18,37 @@
 class Handler
 {
 	public:
-		void		ParseRequestHeader(char *req);
+		void		parseRequestHeader(char *req);
 
- 		std::string GetRequestMethod();
-		std::string GetRequestURI();
-		std::string GetMimeType();
-		std::string GetStatusCode();
+ 		std::string getRequestMethod();
+		std::string getRequestURI();
+		std::string getMimeType();
 		void 		setConfig(ServerConfig &config);
-		int			WorkingLocationIndex(void);
+		int			getWorkingLocationIndex();
 
 	private:
     	std::map<std::string, std::string> _req_header;
-		std::string _method;
-		std::string _uri; // The Request-URI (Uniform Resource Identifier) 
-		std::string _status_code;
-		std::string _status_text;
-		Shared 		_shared;
-		ServerConfig _config;
-		int			_WorkingLocationIndex;
+		std::string 						_method;
+		std::string 						_uri; // The Request-URI (Uniform Resource Identifier) 
+		std::string 						_status_code;
+		std::string 						_status_text;
+		Shared 								_shared;
+		ServerConfig 						_config;
+		int									_WorkingLocationIndex;
 
-		void	HandlePost(char *body);
-		void	HandleGet();
-		void	HandleDelete();
-		bool	validateRequest();
-		bool 	matchLocation();
-		bool 	validateURI(const std::string& uri);
-		void	printRequstData();
-		void    fileResponse(std::string path, std::string statusCode);
-		void 	codeResponse(std::string statusCode);
-		void	getcodeResponse(std::string statusCode, std::string htmlContent);
-		void	redirectionResponse(std::string statusCode, std::string location);
-		std::string generatePageCode(std::string statusCode);
+		void		HandlePost(char *body);
+		void		HandleGet();
+		void		HandleDelete();
+		bool		validateRequest();
+		bool 		matchLocation();
+		bool 		validateURI(const std::string& uri);
+		void		printRequstData();
+		void 		sendErrorResponse(std::string statusCode);
+		void		sendHtmlResponse(std::string statusCode, std::string htmlContent);
+		void		redirectionResponse(std::string statusCode, std::string location);;
+		std::string generateResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength);
 		std::string generateListDir(std::string statusCode, std::string ls);
-		void	GetFileResponse(std::string statusCode, std::string path);
+		void		sendFileResponse(std::string statusCode, std::string path);
 
 };
 
