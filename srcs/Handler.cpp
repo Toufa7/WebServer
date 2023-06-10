@@ -9,6 +9,17 @@
 
 //  ------------- ACCESSOR --------------------
 
+std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
+{
+	std::string MatchedUri;
+	if (uri.find(locationPath) >= 0)
+		MatchedUri = uri.replace(0, locationPath.length(), root);
+	else
+		return (uri);
+	return (MatchedUri);
+}
+
+
 void	Handler::Driver(char *requested_data)
 {
 	if (this->flaghead == 0)
@@ -396,22 +407,27 @@ void Handler::sendFileResponse(std::string statusCode, std::string path)
 
 void Handler::HandleGet(int headerflag)
 {
-	// TODO:
-	int RepStrPos;
+	// TODO: Function to match the location, takes locationsVec, and uri , and should return the closest match
+	//int RepStrPos;
 	size_t i = 0;
 	std::string RealPath, tmp_str, DirStr, UriInit;
 	struct stat s, t;
 
 	UriInit = _uri;
-	RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
-	if (RepStrPos < 0)
-	{
-		std::cout << "I entred here\n";
-		this->sendErrorResponse("404");
-	}
-	else
-		_uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
-	if (stat(_uri.c_str(), &s) == 0)
+	std::cout << _uri << "\n";
+
+	// RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
+	// if (RepStrPos < 0)
+	// {
+	// 	std::cout << "I entred here\n";
+	// 	this->sendErrorResponse("404");
+	// }
+	// else
+	// 	_uri = GetRootLocation(_uri, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+	//_uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+
+
+	if (stat("/Users/otoufah/Desktop/Arsenal.mp4", &s) == 0)
 	{
 		/*------------------------------------------- DIR Handler ----------------------------------------------------*/
 		if (s.st_mode & S_IFDIR)
@@ -483,13 +499,10 @@ void Handler::HandleGet(int headerflag)
 				struct stat file;
 				if (flaghead == 0)
 				{
-					requested_file = open(_uri.c_str(), O_RDONLY);
+					requested_file = open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY);
 					stat(_uri.c_str(), &file);
 					sendResponseHeader("200", ".mp4", "", file.st_size);
 				}
-				int bytesread;
-				int bytessent;
-				char buffer[1024];
 				bytesread = read(requested_file, buffer, sizeof(buffer));
 				if (bytesread == -1)
 					perror("Error (Read) -> ");

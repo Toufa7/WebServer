@@ -15,10 +15,14 @@
 #include "Shared.hpp"
 #include "Config.hpp"
 
+
+#define CHUNK_SIZE  1024
+
 class Handler
 {
 public:
 
+	std::string GetRootLocation(std::string uri, std::string locationPath, std::string root);
 	void Driver(char *requested_data);
 
 	void parseRequestHeader(char *req);
@@ -34,6 +38,9 @@ public:
 	int	client_socket;
 	int flaghead;
 	int requested_file;
+
+	char	buffer[CHUNK_SIZE];
+	int bytesread, bytessent;
 
 private:
 	std::map<std::string, std::string> _req_header;
