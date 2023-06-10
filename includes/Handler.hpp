@@ -40,6 +40,8 @@ class Handler
 		void	HandlePost(char *body);
 		void	HandleGet();
 		void	HandleDelete();
+		void	DeleteFile(const char *path);
+		void	DeleteDirectory(const char *path);
 		bool	validateRequest();
 		bool 	matchLocation();
 		bool 	validateURI(const std::string& uri);
