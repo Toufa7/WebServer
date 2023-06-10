@@ -11,8 +11,9 @@
 
 std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
 {
+	std::cout << "am been called 90" << "\n";
 	std::string MatchedUri;
-	if (uri.find(locationPath) >= 0)
+	if (uri.find(locationPath) != std::string::npos)
 		MatchedUri = uri.replace(0, locationPath.length(), root);
 	else
 		return (uri);
@@ -407,27 +408,32 @@ void Handler::sendFileResponse(std::string statusCode, std::string path)
 
 void Handler::HandleGet(int headerflag)
 {
+	static int a = 0;
+
+	std::cout <<"\n"<< a << " = " << _uri << "\n";
+
 	// TODO: Function to match the location, takes locationsVec, and uri , and should return the closest match
-	//int RepStrPos;
+	int RepStrPos;
 	size_t i = 0;
 	std::string RealPath, tmp_str, DirStr, UriInit;
 	struct stat s, t;
 
 	UriInit = _uri;
-	std::cout << _uri << "\n";
 
-	// RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
-	// if (RepStrPos < 0)
-	// {
-	// 	std::cout << "I entred here\n";
-	// 	this->sendErrorResponse("404");
-	// }
-	// else
-	// 	_uri = GetRootLocation(_uri, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+	RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
+	if (RepStrPos < 0)
+	{
+		std::cout << "I entred here\n";
+		this->sendErrorResponse("404");
+	}
+	else
+		_uri = GetRootLocation(_uri, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+	std::cout << _uri << "\n";
+	//exit(0);
 	//_uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
 
 
-	if (stat("/Users/otoufah/Desktop/Arsenal.mp4", &s) == 0)
+	if (stat(_uri.c_str(), &s) == 0)
 	{
 		/*------------------------------------------- DIR Handler ----------------------------------------------------*/
 		if (s.st_mode & S_IFDIR)
@@ -499,7 +505,7 @@ void Handler::HandleGet(int headerflag)
 				struct stat file;
 				if (flaghead == 0)
 				{
-					requested_file = open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY);
+					requested_file = open(_uri.c_str(), O_RDONLY);
 					stat(_uri.c_str(), &file);
 					sendResponseHeader("200", ".mp4", "", file.st_size);
 				}
@@ -525,15 +531,13 @@ void Handler::HandleGet(int headerflag)
 	{
 		this->sendErrorResponse("404");
 	}
+	a++;
 }
 
 // -------------------------------- Delete method ----------------------
 
 void Handler::DeleteDirectory(const char *path)
 {
-	static int i = 0;
-	i++;
-	std::cout << i << std::endl;
 	DIR *directory;
 	struct dirent *dir;
 	struct stat file;
@@ -579,6 +583,7 @@ void Handler::DeleteDirectory(const char *path)
 	{
 		std::cerr << "Error deleting directory " << path << std::endl;
 	}
+	return;
 }
 
 void Handler::DeleteFile(const char *path)
@@ -592,14 +597,15 @@ void Handler::DeleteFile(const char *path)
 void Handler::HandleDelete()
 {
 	struct stat file;
-	ServerLocation loc =  this->_config.GetLocationsVec()[this->_WorkingLocationIndex];
-	// loc.GetRoot
-	if (stat(this->_uri.c_str(), &file) == 0)
+	std::string path;
+
+	path = GetRootLocation(_uri, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+	if (stat(path.c_str(), &file) == 0)
 	{
 		if (S_ISREG(file.st_mode))
-			DeleteFile(this->_uri.c_str());
+			DeleteFile(path.c_str());
 		else if (S_ISDIR(file.st_mode))
-			DeleteDirectory(this->_uri.c_str());
+			DeleteDirectory(path.c_str());
 	}
 	else
 		std::cerr << "File or Directory doesn't exist :(" << std::endl;
