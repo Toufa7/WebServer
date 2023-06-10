@@ -2,6 +2,8 @@
 #include "Config.hpp"
 #include "Shared.hpp"
 
+// Adding a handler object that takes the working client on
+
 class Client
 {
     private:

@@ -36,7 +36,7 @@ void Server::SendResponseHeader(int clt_skt)
 {
     char response_header[] = "HTTP/1.1 200 OK\r\n"
                                 "Server: Allah Y7ssen L3wan\r\n"
-                                "Content-Length: 82013359\r\n"
+                                "Content-Length: 96953870\r\n"
                                 "Content-Type: video/mp4\r\n\r\n";
     if (send(clt_skt, response_header, strlen(response_header), 0) == -1)
         Error("Error (Send) -> ");
@@ -57,7 +57,7 @@ int Server::AcceptAddClientToSet()
     fcntl(newconnection, F_SETFL, O_NONBLOCK);
     if (newconnection == -1)
         Error("Error (Accept) -> ");
-    _clients.push_back(Client(newconnection, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
+    _clients.push_back(Client(newconnection, open("/Users/ibnada/Desktop/webserv_test_dir/132.mp4", O_RDONLY)));
     client_write_ready = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
     FD_SET(_clients.back().GetCltSocket(), &writefds);
@@ -101,10 +101,11 @@ void Server::SelectSetsInit()
 
 void Server::Start()
 {
+    int flag = 0; 
     CreateServer();
     SelectSetsInit();
     bytesreceived = 0;
-
+    // Iterate over servers 
     while (TRUE)
     {
         tmpfdsread = readfds;
@@ -121,10 +122,12 @@ void Server::Start()
 
         for (itb = _clients.begin(); itb != _clients.end(); itb++)
         {
+            // Calling driver function in client handler that takes the requested data and the flag /
             active_clt = itb->GetCltSocket();
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
+                this->_handler.parseRequestHeader(requested_data);
                 if (bytesreceived < 1)
                 {
                     std::cerr << "Recv (-1) : Connection Closed -> " << active_clt << std::endl;
@@ -134,14 +137,21 @@ void Server::Start()
                 else
                 {
                     client_write_ready = true;
-                    SendResponseHeader(active_clt);
+                    // std::string head = this->_handler.generateResponseHeader("200", ".mp4", "", 96953870);
+                    // if (send(active_clt, head.c_str(), head.length(), 0) == -1)
+                        // Error("Error (Send) -> ");
                 }
             }
 
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {
-                ReadAndSend();
+                if (this->_handler.getRequestMethod() == "GET")
+                {
+                	this->_handler.HandleGet(flag);
+                }
+                // ReadAndSend();
             }
+            flag++;
         }
     }
     close(server_socket);

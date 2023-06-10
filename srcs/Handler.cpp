@@ -2,6 +2,8 @@
 
 //  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
 
+// TODO add drivder function
+
 //  ------------- ACCESSOR --------------------
 
 // Request method getter
@@ -41,7 +43,7 @@ void Handler::printRequstData()
 }
 
 // Generate a response header from the recieved argements
-std::string Handler::generateResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
+void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
 {
 	std::stringstream header;
 
@@ -58,7 +60,8 @@ std::string Handler::generateResponseHeader(std::string statusCode, std::string 
 	header << "Connection: close\r\n";
 	header << "\r\n";
 
-	return header.str();
+	if (send(this->_config.getClientSocket(), header.str().c_str(), header.str().length(), 0) == -1)
+		perror("Error : Sending failed -> ");
 }
 
 std::string Handler::generateListDir(std::string statusCode, std::string ls)
@@ -115,37 +118,9 @@ void Handler::sendErrorResponse(std::string statusCode)
 		}
 		htmlContent = res;
 	}
-	this->sendHtmlResponse(statusCode, htmlContent);
-}
-
-// this function take a status code and htmlcontent and send a response with it
-void Handler::sendHtmlResponse(std::string statusCode, std::string htmlContent)
-{
-	std::string response;
-
-	response = generateResponseHeader(statusCode, ".html", "", htmlContent.length());
-	response += htmlContent;
-
-	if (send(this->_config.getClientSocket(), response.c_str(), response.length(), 0) == -1)
-	{
-		std::cerr << "Error : Sending failed\n";
-		exit(1);
-	}
-	// std::cout << "\n---------------------- [sendHtmlResponse()] error response --------------------- " << std::endl;
-	// std::cout << response << std::endl;
-}
-
-void Handler::redirectionResponse(std::string statusCode, std::string location)
-{
-	std::string response = generateResponseHeader(statusCode, "", location, 0);
-
-	if (send(this->_config.getClientSocket(), response.c_str(), response.length(), 0) == -1)
-	{
-		std::cerr << "Error : Sending failed\n";
-		exit(1);
-	}
-	// std::cout << "\n---------------------- redirection response --------------------- " << std::endl;
-	// std::cout << response << std::endl;
+	sendResponseHeader(statusCode, ".html", "", htmlContent.length());
+	if (send(this->_config.getClientSocket(), htmlContent.c_str(), htmlContent.length(), 0) == -1)
+		perror("Error : Sending failed -> ");
 }
 
 std::string Handler::getMimeType()
@@ -198,8 +173,8 @@ void Handler::parseRequestHeader(char *req)
 	}
 	// printRequstData();
 	// Validate request content
-	// if (!this->validateRequest())
-	// 	return;
+	if (!this->validateRequest())
+		return;
 
 	// if (this->_method == "GET")
 	// 	this->HandleGet();
@@ -283,7 +258,7 @@ bool Handler::matchLocation()
 	if (serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionFlag)
 	{
 		std::string path = serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionPath;
-		this->redirectionResponse(serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionCode, path);
+		this->sendResponseHeader(serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionCode, "", path, 0);
 		return false;
 	}
 	// std::cout << "I Enter\n";
@@ -374,7 +349,7 @@ void Handler::HandlePost(char *body)
 // Send a respone with [statusCode] in the header and content of the file in [path] as body
 void Handler::sendFileResponse(std::string statusCode, std::string path)
 {
-	std::string fileExt, content, response;
+	std::string fileExt, content;
 
 	fileExt = path.substr(path.find_last_of('.'), path.length());
 	std::ifstream file(path.c_str());
@@ -391,17 +366,15 @@ void Handler::sendFileResponse(std::string statusCode, std::string path)
 		return;
 	}
 
-	response = generateResponseHeader(statusCode, fileExt, "", content.length());
-	response += content;
+	sendResponseHeader(statusCode, fileExt, "", content.length());
 
-	if (send(this->_config.getClientSocket(), response.c_str(), response.length(), 0) == -1)
+	if (send(this->_config.getClientSocket(), content.c_str(), content.length(), 0) == -1)
 	{
-		std::cerr << "Error : Sending failed\n";
-		exit(1);
+		perror("Error : Sending failed");
 	}
 }
 
-void Handler::HandleGet()
+void Handler::HandleGet(int headerflag)
 {
 	int RepStrPos;
 	size_t i = 0;
@@ -464,7 +437,13 @@ void Handler::HandleGet()
 						closedir(DirPtr);
 					}
 					if (DirStr.empty() == 0)
-						this->sendHtmlResponse("200", generateListDir("200", DirStr));
+					{
+						std::string lsDir = generateListDir("200", DirStr);
+						if (headerflag == 0)
+							sendResponseHeader("200", ".html", "", lsDir.length());
+						if (send(this->_config.getClientSocket(), lsDir.c_str(), lsDir.length(), 0) == -1)
+							perror("Error : Sending failed");
+					}
 					// addi hna l function li radi t handli l auto indexing
 				}
 				else
@@ -496,79 +475,78 @@ void Handler::HandleGet()
 
 // -------------------------------- Delete method ----------------------
 
-void	Handler::DeleteDirectory(const char *path)
+void Handler::DeleteDirectory(const char *path)
 {
-    static int i = 0;
-    i++;
-    std::cout << i << std::endl;
-    DIR             *directory;
-    struct dirent   *dir;
-    struct stat     file;
-    char            subdir[256];
+	static int i = 0;
+	i++;
+	std::cout << i << std::endl;
+	DIR *directory;
+	struct dirent *dir;
+	struct stat file;
+	char subdir[256];
 
-    // open a directory
-    if ((directory = opendir(path)) == NULL)
-    {
-        std::cerr << "Cannot Open Directory: " << path << std::endl;
-        return ;
-    }
-    // read the contents of the directory
-    while ((dir = readdir(directory)) != NULL)
-    {
-        if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
-            continue;
-        snprintf(subdir, sizeof(subdir), "%s/%s", path, dir->d_name);
-        if (stat(subdir, &file) == 0)
-        {
-            if (S_ISREG(file.st_mode))
-            {
-                std::cout << "File -> " << subdir << std::endl;
-                DeleteFile(subdir);
-            }
-            else if (S_ISDIR(file.st_mode))
-            {
-                std::cout << "Dir -> " << subdir << std::endl;
-                DeleteDirectory(subdir);
-            }
-        }
-        else
-        {
-            std::cerr << "Error getting file or directory " << subdir << std::endl;
-        }
-    }
-    closedir(directory);
-    std::cout << "Path -> " << path << std::endl;
-    if (rmdir(path) == 0)
-    {
-        std::cout << path << ": Directory deleted successfully" << std::endl;
-    }
-    else
-    {
-        std::cerr << "Error deleting directory " << path << std::endl;
-    }
+	// open a directory
+	if ((directory = opendir(path)) == NULL)
+	{
+		std::cerr << "Cannot Open Directory: " << path << std::endl;
+		return;
+	}
+	// read the contents of the directory
+	while ((dir = readdir(directory)) != NULL)
+	{
+		if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
+			continue;
+		snprintf(subdir, sizeof(subdir), "%s/%s", path, dir->d_name);
+		if (stat(subdir, &file) == 0)
+		{
+			if (S_ISREG(file.st_mode))
+			{
+				std::cout << "File -> " << subdir << std::endl;
+				DeleteFile(subdir);
+			}
+			else if (S_ISDIR(file.st_mode))
+			{
+				std::cout << "Dir -> " << subdir << std::endl;
+				DeleteDirectory(subdir);
+			}
+		}
+		else
+		{
+			std::cerr << "Error getting file or directory " << subdir << std::endl;
+		}
+	}
+	closedir(directory);
+	std::cout << "Path -> " << path << std::endl;
+	if (rmdir(path) == 0)
+	{
+		std::cout << path << ": Directory deleted successfully" << std::endl;
+	}
+	else
+	{
+		std::cerr << "Error deleting directory " << path << std::endl;
+	}
 }
 
-void	Handler::DeleteFile(const char *path)
+void Handler::DeleteFile(const char *path)
 {
-    if (unlink(path) == 0)
-        std::cout << path << ": File deleted successfully" << std::endl;
-    else
-           perror("Unlink -> ");
+	if (unlink(path) == 0)
+		std::cout << path << ": File deleted successfully" << std::endl;
+	else
+		perror("Unlink -> ");
 }
 
 void Handler::HandleDelete()
 {
-    const char  *path;
-    struct stat file;
-
-    path = "";
-    if (stat(path, &file) == 0)
-    {
-        if (S_ISREG(file.st_mode))
-            DeleteFile(path);
-        else if (S_ISDIR(file.st_mode))
-            DeleteDirectory(path);
-    }
-    else
-        std::cerr << "File or Directory doesn't exist :(" << std::endl;
+	struct stat file;
+	ServerLocation loc =  this->_config.GetLocationsVec()[this->_WorkingLocationIndex];
+	// loc.GetRoot
+	if (stat(this->_uri.c_str(), &file) == 0)
+	{
+		if (S_ISREG(file.st_mode))
+			DeleteFile(this->_uri.c_str());
+		else if (S_ISDIR(file.st_mode))
+			DeleteDirectory(this->_uri.c_str());
+	}
+	else
+		std::cerr << "File or Directory doesn't exist :(" << std::endl;
 }
