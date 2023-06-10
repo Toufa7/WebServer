@@ -58,7 +58,7 @@ ServerConfig::ServerConfig(const ServerConfig & ServerObj)
 
 ServerConfig & ServerConfig::operator = (const ServerConfig & ServerObj)
 {
-    this->_clientSocket = ServerObj._clientSocket;
+    // this->_clientSocket = ServerObj._clientSocket;
     this->_ServerSocket = ServerObj._ServerSocket;
     this->_Port = ServerObj._Port;
     this->_Host = ServerObj._Host;
@@ -547,11 +547,6 @@ unsigned int ServerConfig::GetPort(void)
     return (_Port);
 }
 
-int                    ServerConfig::getClientSocket(void)
-{
-    return this->_clientSocket;
-}
-
 std::string ServerConfig::GetHost(void)
 {
     return (_Host);
@@ -618,10 +613,11 @@ redirection&    ServerLocation::GetRedirectionInfo(void)
     return (_RedirectionInfo);
 }
 
-void ServerConfig::setClientSocket(int n)
-{
-    this->_clientSocket = n;
-}
+// void ServerConfig::setClientSocket(int n)
+// {
+//     (void)
+//     // this->_clientSocket = n;
+// }
 
 std::map<std::string, std::string>& ServerConfig::GetErrorPageMap(void)
 {

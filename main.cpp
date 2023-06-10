@@ -13,14 +13,22 @@
 
 int main(int ac, char **av)
 {
-    GlobalConfig    configuration;
+    GlobalConfig        configuration;
+    std::vector<Server> servers;
 
     // Missing Config : Add Default Config 
     if (ac == 2)
     {
         configuration.ParseConfigFile(av[1]);
-        Server          WebServer(configuration.GetServersVector()[0]);
-        WebServer.Start();
+
+
+        for (size_t i = 0; i < configuration.GetServersVector().size(); i++)
+        {
+            Server          WebServer(configuration.GetServersVector()[i]);
+            WebServer.Start();
+            servers.push_back(WebServer);
+        }
+        
     }
     else
         InvalidConfigFile("Missing config file.");

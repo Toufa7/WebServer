@@ -56,7 +56,7 @@ class ServerLocation
 class ServerConfig : public ServerLocation
 {
     public:
-        int                                 _clientSocket;
+        // int                                 ;
         int                                 _ServerSocket;
         unsigned int                        _Port;
         std::string                         _Host;
@@ -69,7 +69,6 @@ class ServerConfig : public ServerLocation
         ServerConfig(const ServerConfig & ServerObj);
         ServerConfig & operator = (const ServerConfig & ServerObj);
         int                                 GetServerSocket(void);
-        int                                 getClientSocket(void);
         unsigned int                        GetPort(void);
         std::string                         GetHost(void);
         std::string                         GetClientBodySize(void);

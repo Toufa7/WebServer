@@ -21,11 +21,8 @@
 #include "Config.hpp"
 #include "Client.hpp"
 
-#define PORT        "8080"
 #define BACKLOG     10              // Max allowed connections can be queued up
-#define LOCALHOST   "127.0.0.1"
 #define TRUE        1
-#define CRLF        "\r\n"          // The determination of the line 
 #define CHUNK_SIZE  1024
 
 // Setuping and startig the server : Creating socket -> binding -> listening (Handling multiple clients)
@@ -35,7 +32,6 @@ class Server
 {
     private:
         ServerConfig                _config;
-        Handler                     _handler;
         std::list<Client>           _clients;
         std::list<Client>::iterator it;
         std::list<Client>::iterator itb;

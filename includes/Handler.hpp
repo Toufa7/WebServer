@@ -18,6 +18,9 @@
 class Handler
 {
 public:
+
+	void Driver(char *requested_data);
+
 	void parseRequestHeader(char *req);
 
 	std::string getRequestMethod();
@@ -28,6 +31,9 @@ public:
 	void	sendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength);
 	void HandleGet(int headerflag);
 	void HandleDelete();
+	int	client_socket;
+	int flaghead;
+	int requested_file;
 
 private:
 	std::map<std::string, std::string> _req_header;
@@ -38,6 +44,9 @@ private:
 	Shared _shared;
 	ServerConfig _config;
 	int _WorkingLocationIndex;
+
+
+
 
 	void HandlePost(char *body);
 	bool validateRequest();

@@ -11,15 +11,14 @@ class Client
         int     _socket;
     public:
         // Constructor
+        Handler _client_hanlder;
         Client() {};
         Client(int socket, int fildes)
         {
             _socket = socket;
             _fd = fildes;
-        }
-        Client(int socket)
-        {
-            _socket = socket;
+            _client_hanlder.client_socket = socket;
+            _client_hanlder.flaghead = 0;
         }
         int GetCltFd()
         {

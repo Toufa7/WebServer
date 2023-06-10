@@ -4,7 +4,26 @@
 
 // TODO add drivder function
 
+
+
+
 //  ------------- ACCESSOR --------------------
+
+void	Handler::Driver(char *requested_data)
+{
+	if (this->flaghead == 0)
+		this->parseRequestHeader(requested_data);
+	else
+	{
+		if (this->_method == "GET")
+			this->HandleGet(flaghead);
+		else if (this->_method == "POST")
+			this->HandlePost(requested_data);
+		else if (this->_method == "DELETE")
+			this->HandleDelete();
+	}
+	flaghead++;
+}
 
 // Request method getter
 std::string Handler::getRequestMethod()
@@ -60,7 +79,7 @@ void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, st
 	header << "Connection: close\r\n";
 	header << "\r\n";
 
-	if (send(this->_config.getClientSocket(), header.str().c_str(), header.str().length(), 0) == -1)
+	if (send(this->client_socket, header.str().c_str(), header.str().length(), 0) == -1)
 		perror("Error : Sending failed -> ");
 }
 
@@ -119,7 +138,7 @@ void Handler::sendErrorResponse(std::string statusCode)
 		htmlContent = res;
 	}
 	sendResponseHeader(statusCode, ".html", "", htmlContent.length());
-	if (send(this->_config.getClientSocket(), htmlContent.c_str(), htmlContent.length(), 0) == -1)
+	if (send(this->client_socket, htmlContent.c_str(), htmlContent.length(), 0) == -1)
 		perror("Error : Sending failed -> ");
 }
 
@@ -147,7 +166,7 @@ std::string Handler::getMimeType()
 
 void Handler::parseRequestHeader(char *req)
 {
-	// 	std::cout << "-> " << req << std::endl;
+		std::cout << "-> " << req << std::endl;
 	// 	exit(0);
 	int delimiter_position;
 	std::string current_line, key, value;
@@ -176,13 +195,13 @@ void Handler::parseRequestHeader(char *req)
 	if (!this->validateRequest())
 		return;
 
-	// if (this->_method == "GET")
-	// 	this->HandleGet();
-	//	else if (this->_method == "POST")
-	//		this->HandlePost(body);
-	//	else if (this->_method == "DELETE")
-	//		this->HandleDelete();
-	(void)body;
+	if (this->_method == "GET")
+		this->HandleGet(0);
+	else if (this->_method == "POST")
+		this->HandlePost(body);
+	else if (this->_method == "DELETE")
+		this->HandleDelete();
+
 }
 
 // Check for Possible error in the Request
@@ -349,6 +368,7 @@ void Handler::HandlePost(char *body)
 // Send a respone with [statusCode] in the header and content of the file in [path] as body
 void Handler::sendFileResponse(std::string statusCode, std::string path)
 {
+	(void)statusCode;
 	std::string fileExt, content;
 
 	fileExt = path.substr(path.find_last_of('.'), path.length());
@@ -366,9 +386,9 @@ void Handler::sendFileResponse(std::string statusCode, std::string path)
 		return;
 	}
 
-	sendResponseHeader(statusCode, fileExt, "", content.length());
+	// sendResponseHeader(statusCode, fileExt, "", content.length());
 
-	if (send(this->_config.getClientSocket(), content.c_str(), content.length(), 0) == -1)
+	if (send(this->client_socket, content.c_str(), content.length(), 0) == -1)
 	{
 		perror("Error : Sending failed");
 	}
@@ -376,12 +396,12 @@ void Handler::sendFileResponse(std::string statusCode, std::string path)
 
 void Handler::HandleGet(int headerflag)
 {
+	// TODO:
 	int RepStrPos;
 	size_t i = 0;
 	std::string RealPath, tmp_str, DirStr, UriInit;
 	struct stat s, t;
 
-	// std::cout << "_uri get() -->" << _uri << "<--\n";
 	UriInit = _uri;
 	RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
 	if (RepStrPos < 0)
@@ -391,8 +411,6 @@ void Handler::HandleGet(int headerflag)
 	}
 	else
 		_uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
-	// std::cout << "_uri get() 000>" << _uri << "<000\n";
-
 	if (stat(_uri.c_str(), &s) == 0)
 	{
 		/*------------------------------------------- DIR Handler ----------------------------------------------------*/
@@ -441,7 +459,7 @@ void Handler::HandleGet(int headerflag)
 						std::string lsDir = generateListDir("200", DirStr);
 						if (headerflag == 0)
 							sendResponseHeader("200", ".html", "", lsDir.length());
-						if (send(this->_config.getClientSocket(), lsDir.c_str(), lsDir.length(), 0) == -1)
+						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
 							perror("Error : Sending failed");
 					}
 					// addi hna l function li radi t handli l auto indexing
@@ -457,20 +475,43 @@ void Handler::HandleGet(int headerflag)
 		{
 			if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetCgiInfo().path != "n/a")
 			{
+				// std::cout << " HAHSKJAHSKJHAKJSHKAJH\n";
 				// handle file cgi
 			}
 			else
 			{
-				// part flag
-				std::cout << "File size is :" << s.st_size << "\n";
-				this->sendFileResponse("200", this->_uri);
+				struct stat file;
+				if (flaghead == 0)
+				{
+					requested_file = open(_uri.c_str(), O_RDONLY);
+					stat(_uri.c_str(), &file);
+					sendResponseHeader("200", ".mp4", "", file.st_size);
+				}
+				int bytesread;
+				int bytessent;
+				char buffer[1024];
+				bytesread = read(requested_file, buffer, sizeof(buffer));
+				if (bytesread == -1)
+					perror("Error (Read) -> ");
+				bytessent = send(this->client_socket, buffer, bytesread, 0);
+				if (bytessent == -1)
+				{
+					// DropClient();
+					perror("Error (Send) -> ");
+				}
+				if (bytessent == 0 || bytesread == 0)
+				{
+					perror("Error (Send) -> ");
+					// DropClient();
+				}
 			}
 		}
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 	}
 	else
+	{
 		this->sendErrorResponse("404");
-	// this->sendFileResponse("200", "test/homepage.html");
+	}
 }
 
 // -------------------------------- Delete method ----------------------

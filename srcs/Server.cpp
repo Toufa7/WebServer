@@ -16,27 +16,27 @@ void    Server::Init()
     memset(&server_infos, 0, sizeof(server_infos));
     server_infos.ai_family      = AF_INET;
     server_infos.ai_protocol    = SOCK_STREAM;
-    getaddrinfo(LOCALHOST, PORT, &server_infos, &sinfo_ptr);
+    getaddrinfo(this->_config.GetHost().c_str(), std::to_string(this->_config.GetPort()).c_str(), &server_infos, &sinfo_ptr);
 }
 
 void    Server::CreateServer()
 {
     Init();
     if ((server_socket = socket(sinfo_ptr->ai_family, sinfo_ptr->ai_protocol, 0)) == -1)
-       Error("Error: Creating socket failed\n");
+       Error("Error: Creating socket failed -> ");
     int optval = 1;
     setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
     if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
-       Error("Error: Binding failed\n");
+       Error("Error: Binding failed -> ");
     if (listen(server_socket, FD_SETSIZE) == -1)
-       Error("Error: Listening failed\n");
+       Error("Error: Listening failed -> ");
 }
 
 void Server::SendResponseHeader(int clt_skt)
 {
     char response_header[] = "HTTP/1.1 200 OK\r\n"
                                 "Server: Allah Y7ssen L3wan\r\n"
-                                "Content-Length: 96953870\r\n"
+                                "Content-Length: 82013359\r\n"
                                 "Content-Type: video/mp4\r\n\r\n";
     if (send(clt_skt, response_header, strlen(response_header), 0) == -1)
         Error("Error (Send) -> ");
@@ -57,7 +57,7 @@ int Server::AcceptAddClientToSet()
     fcntl(newconnection, F_SETFL, O_NONBLOCK);
     if (newconnection == -1)
         Error("Error (Accept) -> ");
-    _clients.push_back(Client(newconnection, open("/Users/ibnada/Desktop/webserv_test_dir/132.mp4", O_RDONLY)));
+    _clients.push_back(Client(newconnection, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
     client_write_ready = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
     FD_SET(_clients.back().GetCltSocket(), &writefds);
@@ -127,28 +127,34 @@ void Server::Start()
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
-                this->_handler.parseRequestHeader(requested_data);
+                // this->_handler.parseRequestHeader(requested_data);
+
+                // Checking incase of of invalid request 
+
                 if (bytesreceived < 1)
                 {
                     std::cerr << "Recv (-1) : Connection Closed -> " << active_clt << std::endl;
                     DropClient();
                     continue;
                 }
+                
                 else
                 {
                     client_write_ready = true;
-                    // std::string head = this->_handler.generateResponseHeader("200", ".mp4", "", 96953870);
-                    // if (send(active_clt, head.c_str(), head.length(), 0) == -1)
-                        // Error("Error (Send) -> ");
+                //     std::string head = itb->_client_hanlder.generateResponseHeader("200", ".mp4", "", 96953870);
+                //     if (send(active_clt, head.c_str(), head.length(), 0) == -1)
+                //         Error("Error (Send) -> ");
                 }
             }
 
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {
-                if (this->_handler.getRequestMethod() == "GET")
-                {
-                	this->_handler.HandleGet(flag);
-                }
+                itb->_client_hanlder.setConfig(this->_config);
+                itb->_client_hanlder.Driver(requested_data);
+            //     if (this->_handler.getRequestMethod() == "GET")
+            //     {
+            //     	this->_handler.HandleGet(flag);
+            //     }
                 // ReadAndSend();
             }
             flag++;
