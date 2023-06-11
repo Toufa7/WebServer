@@ -11,9 +11,14 @@
 
 std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
 {
+	std::cout << "GetRootLocation been called\n";
+	std::cout << "URI is -> " << uri << std::endl;
 	std::string MatchedUri;
 	if (uri.find(locationPath) != std::string::npos)
+	{
+		root += '/';
 		MatchedUri = uri.replace(0, locationPath.length(), root);
+	}
 	else
 		return (uri);
 	return (MatchedUri);
@@ -89,7 +94,7 @@ void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, st
 		perror("Error : Sending failed -> ");
 }
 
-std::string Handler::generateListDir(std::string statusCode, std::string ls)
+std::string Handler::generateListDir(std::string statusCode, std::string ls) 
 {
 	// 5asek tcheki wach ls 3amra wla 5awya
 	std::stringstream s(ls);
@@ -251,42 +256,42 @@ bool Handler::validateRequest()
 // match location from the config file and validate method
 bool Handler::matchLocation()
 {
-	std::string path = this->_uri;
+	this->_path = this->_uri;
 	std::vector<ServerLocation> serverLocations = this->_config.GetLocationsVec();
 	size_t i = 0, old_size = 0, root_location = 0;
 
 	// Seperate Path from args if there is any
 	if (this->_uri.find('?') != std::string::npos)
-		path = this->_uri.substr(0, this->_uri.find('?'));
+		_path = this->_uri.substr(0, this->_uri.find('?'));
 
 	// find the closest location to requested resource
 	for (i = 0; i < serverLocations.size(); i++)
 	{
-		size_t tmp_index = path.find(serverLocations[i].GetLocationPath());
+		size_t tmp_index = _path.find(serverLocations[i].GetLocationPath());
 		if (tmp_index != std::string::npos)
 		{
 			if (serverLocations[i].GetLocationPath() == "/") // saving '/' location
 				root_location = i;
-			if ((path[0] == '/') && (path.length() == 1)) // case of '/' only
+			if ((_path[0] == '/') && (_path.length() == 1)) // case of '/' only
 				this->_workingLocation = serverLocations[i];
 			if (serverLocations[i].GetLocationPath().length() > old_size) // case of closest valid location
 			{
 				old_size = serverLocations[i].GetLocationPath().length();
 				this->_workingLocation = serverLocations[i];
 			}
-			if ((path[0] == '/') && (i == serverLocations.size()) && old_size == 0) // case of '/not_valid'
+			if ((_path[0] == '/') && (i == serverLocations.size()) && old_size == 0) // case of '/not_valid'
 				this->_workingLocation = serverLocations[root_location];
 		}
 	}
 
+	// Check for location redirection
 	if (this->_workingLocation.GetRedirectionInfo().RedirectionFlag)
 	{
-		std::string path = this->_workingLocation.GetRedirectionInfo().RedirectionPath;
-		this->sendResponseHeader(this->_workingLocation.GetRedirectionInfo().RedirectionCode, "", path, 0);
+		_path = this->_workingLocation.GetRedirectionInfo().RedirectionPath;
+		this->sendResponseHeader(this->_workingLocation.GetRedirectionInfo().RedirectionCode, "", _path, 0);
 		return false;
 	}
 
-	// Check for location redirection
 	std::vector<std::string> allowedMethods = this->_workingLocation.GetAllowedMethodsVec();
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
 	{
@@ -294,6 +299,10 @@ bool Handler::matchLocation()
 		return false;
 	}
 
+	//std::cout << "uri is : " << this->_uri << '\n';
+	_path = GetRootLocation(this->_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
+	//_path += '/';
+	//std::cout << "Path is : " << _path << '\n';
 	// If location not found send a "not found" response
 	// if (i == serverLocations.size())
 	// {
@@ -400,41 +409,44 @@ void Handler::HandleGet()
 {
 	static int a = 0;
 
-	std::cout <<"\n"<< a << " = " << _uri << "\n";
+	// std::cout << "Header flag is " << this->headerflag << '\n';
+	std::cout << "\n" << a << " = " << _path << "\n";
 
 	// TODO: Function to match the location, takes locationsVec, and uri , and should return the closest match
-	int RepStrPos;
+	//int RepStrPos;
 	size_t i = 0;
 	std::string RealPath, tmp_str, DirStr, UriInit;
 	struct stat s, t;
 
 	UriInit = _uri;
 
-	RepStrPos = _uri.find_first_of(this->_workingLocation.GetLocationPath());
-	if (RepStrPos < 0)
-	{
-		std::cout << "I entred here\n";
-		this->sendErrorResponse("404");
-	}
-	else
-		_uri = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
-	std::cout << _uri << "\n";
+	// RepStrPos = _uri.find_first_of(this->_workingLocation.GetLocationPath());
+	// if (RepStrPos < 0)
+	// {
+	// 	std::cout << "I entred here\n";
+	// 	this->sendErrorResponse("404");
+	// }
+	// else
+	// 	_uri = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
+	//std::cout << "GetRootLocation been called\n";
+	//matchstd::cout << _uri << "\n";
 	//exit(0);
 	//_uri.replace(0, this->_workingLocation.GetLocationPath().length(), this->_workingLocation.GetRoot());
 
 
-	if (stat(_uri.c_str(), &s) == 0)
+	if (stat(_path.c_str(), &s) == 0)
 	{
+		std::cout << "--- here 1 ----\n";
 		/*------------------------------------------- DIR Handler ----------------------------------------------------*/
 		if (s.st_mode & S_IFDIR)
 		{
-			if (_uri[_uri.size() - 1] != '/')
-				_uri += '/';
+			if (_path[_path.size() - 1] != '/')
+				_path += '/';
 			if (this->_workingLocation.GetIndexesVec().empty() == 0) // identify the working index
 			{
 				for (i = 0; i < this->_workingLocation.GetIndexesVec().size(); i++)
 				{
-					tmp_str = _uri;
+					tmp_str = _path;
 					tmp_str += this->_workingLocation.GetIndexesVec()[i];
 					if (stat(tmp_str.c_str(), &t) == 0)
 						break;
@@ -452,7 +464,7 @@ void Handler::HandleGet()
 				{
 					DIR *DirPtr;
 					struct dirent *Dir;
-					DirPtr = opendir(_uri.c_str());
+					DirPtr = opendir(_path.c_str());
 					if (DirPtr)
 					{
 						std::string IfDir = UriInit;
@@ -485,6 +497,7 @@ void Handler::HandleGet()
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 		else if (s.st_mode & S_IFREG)
 		{
+			std::cout << "--- here 2 ----\n";
 			if (this->_workingLocation.GetCgiInfo().path != "n/a")
 			{
 				// std::cout << " HAHSKJAHSKJHAKJSHKAJH\n";
@@ -492,12 +505,14 @@ void Handler::HandleGet()
 			}
 			else
 			{
+				std::cout << "--- here 3 ----\n";
 				struct stat file;
 				if (this->headerflag == 0)
 				{
-					requested_file = open(_uri.c_str(), O_RDONLY);
-					stat(_uri.c_str(), &file);
-					sendResponseHeader("200", ".mp4", "", file.st_size);
+					std::string filext = _path.substr(_path.find_last_of('.'), _path.length());
+					requested_file = open(this->_path.c_str(), O_RDONLY);
+					stat(this->_path.c_str(), &file);
+					sendResponseHeader("200", filext, "", file.st_size);
 				}
 				bytesread = read(requested_file, buffer, sizeof(buffer));
 				if (bytesread == -1)
@@ -519,6 +534,7 @@ void Handler::HandleGet()
 	}
 	else
 	{
+
 		this->sendErrorResponse("404");
 	}
 	a++;
@@ -587,9 +603,9 @@ void Handler::DeleteFile(const char *path)
 void Handler::HandleDelete()
 {
 	struct stat file;
-	std::string path;
+	std::string path = this->_path;
 
-	path = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
+	//path = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
 
 
 	if (stat(path.c_str(), &file) == 0)

@@ -35,6 +35,7 @@ private:
 	std::map<std::string, std::string> _req_header;
 	std::string _method;
 	std::string _uri; // The Request-URI (Uniform Resource Identifier)
+	std::string _path;
 	Shared _shared;
 	ServerConfig _config;
 	ServerLocation _workingLocation;

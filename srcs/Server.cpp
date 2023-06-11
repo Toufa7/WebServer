@@ -48,7 +48,7 @@ void Server::DropClient()
     FD_CLR(active_clt, &readfds);
     FD_CLR(active_clt, &writefds);
     _clients.erase(itb);
-    close(itb->GetCltFd());
+    //close(itb->GetCltFd());
 }
 
 int Server::AcceptAddClientToSet()
@@ -57,7 +57,7 @@ int Server::AcceptAddClientToSet()
     fcntl(newconnection, F_SETFL, O_NONBLOCK);
     if (newconnection == -1)
         Error("Error (Accept) -> ");
-    _clients.push_back(Client(newconnection, open("/Users/otoufah/Desktop/Arsenal.mp4", O_RDONLY)));
+    _clients.push_back(Client(newconnection));
     client_write_ready = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
     FD_SET(_clients.back().GetCltSocket(), &writefds);
@@ -67,24 +67,24 @@ int Server::AcceptAddClientToSet()
 }
 
 
-void    Server::ReadAndSend()
-{
-    // Continue running even if the write/send operation fails due to a closed/invalid socket
-    // signal(SIGPIPE, SIG_IGN);
-    bytesread = read(itb->GetCltFd(), buffer, sizeof(buffer));
-    if (bytesread == -1)
-        Error("Error (Read) -> ");
-    bytessent = send(active_clt, buffer, bytesread, 0);
-    if (bytessent == -1)
-    {
-        DropClient();
-        Error("Error (Send) -> ");
-    }
-    if (bytessent == 0 || bytesread == 0)
-    {
-        DropClient();
-    }
-}
+// void    Server::ReadAndSend()
+// {
+//     // Continue running even if the write/send operation fails due to a closed/invalid socket
+//     // signal(SIGPIPE, SIG_IGN);
+//     bytesread = read(itb->GetCltFd(), buffer, sizeof(buffer));
+//     if (bytesread == -1)
+//         Error("Error (Read) -> ");
+//     bytessent = send(active_clt, buffer, bytesread, 0);
+//     if (bytessent == -1)
+//     {
+//         DropClient();
+//         Error("Error (Send) -> ");
+//     }
+//     if (bytessent == 0 || bytesread == 0)
+//     {
+//         DropClient();
+//     }
+// }
 
 void Server::SelectSetsInit()
 {
