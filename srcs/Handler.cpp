@@ -22,18 +22,18 @@ std::string Handler::GetRootLocation(std::string uri, std::string locationPath, 
 
 void	Handler::Driver(char *requested_data)
 {
-	if (this->flaghead == 0)
+	if (this->headerflag == 0)
 		this->parseRequestHeader(requested_data);
 	else
 	{
 		if (this->_method == "GET")
-			this->HandleGet(flaghead);
+			this->HandleGet();
 		else if (this->_method == "POST")
 			this->HandlePost(requested_data);
 		else if (this->_method == "DELETE")
 			this->HandleDelete();
 	}
-	flaghead++;
+	this->headerflag++;
 }
 
 // Request method getter
@@ -51,11 +51,6 @@ std::string Handler::getRequestURI()
 void Handler::setConfig(ServerConfig &config)
 {
 	this->_config = config;
-}
-
-int Handler::getWorkingLocationIndex()
-{
-	return _WorkingLocationIndex;
 }
 
 // ------------- METHODS -------------
@@ -207,7 +202,7 @@ void Handler::parseRequestHeader(char *req)
 		return;
 
 	if (this->_method == "GET")
-		this->HandleGet(0);
+		this->HandleGet();
 	else if (this->_method == "POST")
 		this->HandlePost(body);
 	else if (this->_method == "DELETE")
@@ -258,7 +253,6 @@ bool Handler::matchLocation()
 {
 	std::string path = this->_uri;
 	std::vector<ServerLocation> serverLocations = this->_config.GetLocationsVec();
-	int tmp_index = 0;
 	size_t i = 0, old_size = 0, root_location = 0;
 
 	// Seperate Path from args if there is any
@@ -268,41 +262,39 @@ bool Handler::matchLocation()
 	// find the closest location to requested resource
 	for (i = 0; i < serverLocations.size(); i++)
 	{
-		tmp_index = path.find(serverLocations[i].GetLocationPath());
-		if (tmp_index != -1)
+		size_t tmp_index = path.find(serverLocations[i].GetLocationPath());
+		if (tmp_index != std::string::npos)
 		{
 			if (serverLocations[i].GetLocationPath() == "/") // saving '/' location
 				root_location = i;
 			if ((path[0] == '/') && (path.length() == 1)) // case of '/' only
-				_WorkingLocationIndex = i;
+				this->_workingLocation = serverLocations[i];
 			if (serverLocations[i].GetLocationPath().length() > old_size) // case of closest valid location
 			{
 				old_size = serverLocations[i].GetLocationPath().length();
-				_WorkingLocationIndex = i;
+				this->_workingLocation = serverLocations[i];
 			}
 			if ((path[0] == '/') && (i == serverLocations.size()) && old_size == 0) // case of '/not_valid'
-				_WorkingLocationIndex = root_location;
+				this->_workingLocation = serverLocations[root_location];
 		}
 	}
 
-	if (serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionFlag)
+	if (this->_workingLocation.GetRedirectionInfo().RedirectionFlag)
 	{
-		std::string path = serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionPath;
-		this->sendResponseHeader(serverLocations[_WorkingLocationIndex].GetRedirectionInfo().RedirectionCode, "", path, 0);
+		std::string path = this->_workingLocation.GetRedirectionInfo().RedirectionPath;
+		this->sendResponseHeader(this->_workingLocation.GetRedirectionInfo().RedirectionCode, "", path, 0);
 		return false;
 	}
-	// std::cout << "I Enter\n";
-	// exit(0);
-	std::vector<std::string> allowedMethods = serverLocations[_WorkingLocationIndex].GetAllowedMethodsVec();
+
+	// Check for location redirection
+	std::vector<std::string> allowedMethods = this->_workingLocation.GetAllowedMethodsVec();
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
 	{
 		this->sendErrorResponse("405");
 		return false;
 	}
-	// Check for location redirection
 
-	// based on new design, path will be checked ferther in every method for validity
-
+	// If location not found send a "not found" response
 	// if (i == serverLocations.size())
 	// {
 	// 	this->sendErrorResponse("404");
@@ -353,7 +345,6 @@ void Handler::HandlePost(char *body)
 	{
 		// Create a file stream for writing
 		std::string fileName = this->_shared.generateFileName("upload/", this->_shared.file_extensions[mimeType]);
-		std::cout << "---------> " << fileName << std::endl;
 		std::ofstream file(fileName, std::ios::out | std::ios::binary);
 		if (!file)
 		{
@@ -405,7 +396,7 @@ void Handler::sendFileResponse(std::string statusCode, std::string path)
 	}
 }
 
-void Handler::HandleGet(int headerflag)
+void Handler::HandleGet()
 {
 	static int a = 0;
 
@@ -419,17 +410,17 @@ void Handler::HandleGet(int headerflag)
 
 	UriInit = _uri;
 
-	RepStrPos = _uri.find_first_of(this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath());
+	RepStrPos = _uri.find_first_of(this->_workingLocation.GetLocationPath());
 	if (RepStrPos < 0)
 	{
 		std::cout << "I entred here\n";
 		this->sendErrorResponse("404");
 	}
 	else
-		_uri = GetRootLocation(_uri, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+		_uri = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
 	std::cout << _uri << "\n";
 	//exit(0);
-	//_uri.replace(0, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath().length(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+	//_uri.replace(0, this->_workingLocation.GetLocationPath().length(), this->_workingLocation.GetRoot());
 
 
 	if (stat(_uri.c_str(), &s) == 0)
@@ -439,12 +430,12 @@ void Handler::HandleGet(int headerflag)
 		{
 			if (_uri[_uri.size() - 1] != '/')
 				_uri += '/';
-			if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetIndexesVec().empty() == 0) // identify the working index
+			if (this->_workingLocation.GetIndexesVec().empty() == 0) // identify the working index
 			{
-				for (i = 0; i < this->_config.GetLocationsVec()[_WorkingLocationIndex].GetIndexesVec().size(); i++)
+				for (i = 0; i < this->_workingLocation.GetIndexesVec().size(); i++)
 				{
 					tmp_str = _uri;
-					tmp_str += this->_config.GetLocationsVec()[_WorkingLocationIndex].GetIndexesVec()[i];
+					tmp_str += this->_workingLocation.GetIndexesVec()[i];
 					if (stat(tmp_str.c_str(), &t) == 0)
 						break;
 					tmp_str.erase();
@@ -457,7 +448,7 @@ void Handler::HandleGet(int headerflag)
 			else
 			{
 				// case of no index file and should check auto index:handled
-				if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetAutoIndex() == 1)
+				if (this->_workingLocation.GetAutoIndex() == 1)
 				{
 					DIR *DirPtr;
 					struct dirent *Dir;
@@ -478,7 +469,7 @@ void Handler::HandleGet(int headerflag)
 					if (DirStr.empty() == 0)
 					{
 						std::string lsDir = generateListDir("200", DirStr);
-						if (headerflag == 0)
+						if (this->headerflag == 0)
 							sendResponseHeader("200", ".html", "", lsDir.length());
 						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
 							perror("Error : Sending failed");
@@ -494,7 +485,7 @@ void Handler::HandleGet(int headerflag)
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 		else if (s.st_mode & S_IFREG)
 		{
-			if (this->_config.GetLocationsVec()[_WorkingLocationIndex].GetCgiInfo().path != "n/a")
+			if (this->_workingLocation.GetCgiInfo().path != "n/a")
 			{
 				// std::cout << " HAHSKJAHSKJHAKJSHKAJH\n";
 				// handle file cgi
@@ -502,7 +493,7 @@ void Handler::HandleGet(int headerflag)
 			else
 			{
 				struct stat file;
-				if (flaghead == 0)
+				if (this->headerflag == 0)
 				{
 					requested_file = open(_uri.c_str(), O_RDONLY);
 					stat(_uri.c_str(), &file);
@@ -598,7 +589,7 @@ void Handler::HandleDelete()
 	struct stat file;
 	std::string path;
 
-	path = GetRootLocation(_uri, this->_config.GetLocationsVec()[_WorkingLocationIndex].GetLocationPath(), this->_config.GetLocationsVec()[_WorkingLocationIndex].GetRoot());
+	path = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
 
 
 	if (stat(path.c_str(), &file) == 0)
