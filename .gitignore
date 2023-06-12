@@ -5,8 +5,7 @@ Server
 */*.o
 .vscode
 upload
-Makefile
-Server.dSYM
+*.dSYM
 .idea
 .DS_Store
 conf
