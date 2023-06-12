@@ -8,4 +8,4 @@ upload
 *.dSYM
 .idea
 .DS_Store
-conf
+conf/

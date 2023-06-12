@@ -441,13 +441,15 @@ int Handler::HandleGet()
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 		else if (s.st_mode & S_IFREG)
 		{
-			std::cout << "--- here 2 ----\n";
-
 			
 			if (this->_workingLocation.GetCgiInfo().path != "n/a")
 			{
-				// std::cout << " HAHSKJAHSKJHAKJSHKAJH\n";
 				// handle file cgi
+				if (this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type)
+				{
+					//check call to handle cgi
+					//this->handleCgi(_path);
+				}
 			}
 			else
 			{
