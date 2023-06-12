@@ -30,6 +30,7 @@ public:
 	void setConfig(ServerConfig &config);
 	int headerflag;
 	int client_socket;
+	int _postFileFd;
 
 private:
 	std::map<std::string, std::string> _req_header;
@@ -39,7 +40,6 @@ private:
 	Shared _shared;
 	ServerConfig _config;
 	ServerLocation _workingLocation;
-	int _postFileFd;
 	int requested_file;
 	char buffer[CHUNK_SIZE];
 	int bytesread, bytessent;

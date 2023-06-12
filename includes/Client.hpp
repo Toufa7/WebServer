@@ -18,6 +18,7 @@ class Client
             _socket = socket;
             //_fd = fildes;
             _client_hanlder.client_socket = socket;
+            _client_hanlder._postFileFd = -1;
             _client_hanlder.headerflag = 0;
         }
         // int GetCltFd()
