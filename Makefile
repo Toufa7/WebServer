@@ -1,6 +1,6 @@
 NAME = Server
 CC = c++
-CFLAGS = -std=c++98 -Wall -Wextra -Werror -g
+CFLAGS = -std=c++98 -Wall -Wextra -Werror -g -fsanitize=address
 
 FILES = main.cpp \
 	srcs/Server.cpp \

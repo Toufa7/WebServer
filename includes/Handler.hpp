@@ -17,16 +17,16 @@
 
 #define CHUNK_SIZE 1024
 
+
 class Handler
 {
 public:
 	std::string GetRootLocation(std::string uri, std::string locationPath, std::string root);
-	void Driver(char *requested_data);
+	int Driver(char *requested_data, int bytesreceived);
 
 
 	std::string getRequestMethod();
 	std::string getRequestURI();
-	std::string getMimeType();
 	void setConfig(ServerConfig &config);
 	int headerflag;
 	int client_socket;
@@ -39,14 +39,15 @@ private:
 	Shared _shared;
 	ServerConfig _config;
 	ServerLocation _workingLocation;
+	int _postFileFd;
 	int requested_file;
 	char buffer[CHUNK_SIZE];
 	int bytesread, bytessent;
 
-	void parseRequestHeader(char *req);
-	void HandlePost(char *body);
-	void HandleGet();
-	void HandleDelete();
+	int parseRequestHeader(char *req, int bytesreceived);
+	int HandlePost(char *body, int bytesreceived);
+	int HandleGet();
+	int HandleDelete();
 	bool validateRequest();
 	bool matchLocation();
 	bool validateURI(const std::string &uri);
@@ -54,7 +55,6 @@ private:
 	void sendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength);
 	void sendErrorResponse(std::string statusCode);
 	std::string generateListDir(std::string statusCode, std::string ls);
-	void sendFileResponse(std::string statusCode, std::string path);
 	void DeleteFile(const char *path);
 	void DeleteDirectory(const char *path);
 };

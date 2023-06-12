@@ -4,42 +4,7 @@
 
 // TODO add drivder function
 
-
-
-
 //  ------------- ACCESSOR --------------------
-
-std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
-{
-	std::cout << "GetRootLocation been called\n";
-	std::cout << "URI is -> " << uri << std::endl;
-	std::string MatchedUri;
-	if (uri.find(locationPath) != std::string::npos)
-	{
-		root += '/';
-		MatchedUri = uri.replace(0, locationPath.length(), root);
-	}
-	else
-		return (uri);
-	return (MatchedUri);
-}
-
-
-void	Handler::Driver(char *requested_data)
-{
-	if (this->headerflag == 0)
-		this->parseRequestHeader(requested_data);
-	else
-	{
-		if (this->_method == "GET")
-			this->HandleGet();
-		else if (this->_method == "POST")
-			this->HandlePost(requested_data);
-		else if (this->_method == "DELETE")
-			this->HandleDelete();
-	}
-	this->headerflag++;
-}
 
 // Request method getter
 std::string Handler::getRequestMethod()
@@ -60,6 +25,25 @@ void Handler::setConfig(ServerConfig &config)
 
 // ------------- METHODS -------------
 
+int Handler::Driver(char *requested_data, int bytesreceived)
+{
+	// std::cerr << "--------> in Driver bytesreceived is: " << bytesreceived << std::endl;
+	int re = 1;
+	if (this->headerflag == 0)
+		re = this->parseRequestHeader(requested_data, bytesreceived);
+	else
+	{
+		if (this->_method == "GET")
+			re = this->HandleGet();
+		else if (this->_method == "POST")
+			re = this->HandlePost(requested_data, bytesreceived);
+		else if (this->_method == "DELETE")
+			re = this->HandleDelete();
+	}
+	this->headerflag++;
+	return re;
+}
+
 void Handler::printRequstData()
 {
 	// Print Header key and values
@@ -70,6 +54,21 @@ void Handler::printRequstData()
 	{
 		std::cout << it->first << ": |" << it->second << "|\n";
 	}
+}
+
+std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
+{
+	std::cout << "GetRootLocation been called\n";
+	std::cout << "URI is -> " << uri << std::endl;
+	std::string MatchedUri;
+	if (uri.find(locationPath) != std::string::npos)
+	{
+		root += '/';
+		MatchedUri = uri.replace(0, locationPath.length(), root);
+	}
+	else
+		return (uri);
+	return (MatchedUri);
 }
 
 // Generate a response header from the recieved argements
@@ -94,7 +93,7 @@ void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, st
 		perror("Error : Sending failed -> ");
 }
 
-std::string Handler::generateListDir(std::string statusCode, std::string ls) 
+std::string Handler::generateListDir(std::string statusCode, std::string ls)
 {
 	// 5asek tcheki wach ls 3amra wla 5awya
 	std::stringstream s(ls);
@@ -153,40 +152,20 @@ void Handler::sendErrorResponse(std::string statusCode)
 		perror("Error : Sending failed -> ");
 }
 
-std::string Handler::getMimeType()
-{
-	Shared mime_map;
-	int dot_position;
-	std::string extention;
-	std::map<std::string, std::string>::iterator it;
-
-	// case of path with a file extention
-	dot_position = this->_uri.find_last_of(".");
-	if (dot_position >= 0)
-	{
-		extention = this->_uri.substr(dot_position);
-		it = mime_map.mime_types.find(extention);
-		if (it != mime_map.mime_types.end())
-			return (it->second);
-	}
-	// other cases that should be handled
-	return ("text/html");
-}
-
 // -------------------------------- Request parse and validation ------------
 
-void Handler::parseRequestHeader(char *req)
+int Handler::parseRequestHeader(char *req, int bytesreceived)
 {
-		std::cout << "-> " << req << std::endl;
+	std::cout << "-> " << req << std::endl;
 	// 	exit(0);
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
 
 	std::string request = req;
-	size_t header_len = request.find("\r\n\r\n");		// Find the end of the request header
-	std::string header = request.substr(0, header_len); // Save the header
-	body = req + header_len + 4;						// Save the body
+	size_t header_len = request.find("\r\n\r\n");				  // Find the end of the request header
+	std::string header = request.substr(0, header_len);			  // Save the header
+	body = req + header_len + 4, bytesreceived -= header_len + 4; // Save the body
 	std::stringstream request_stream(header);
 
 	request_stream >> std::skipws >> std::ws >> this->_method; // Streaming methode into _methode while taking care of white spaces
@@ -204,15 +183,15 @@ void Handler::parseRequestHeader(char *req)
 	// printRequstData();
 	// Validate request content
 	if (!this->validateRequest())
-		return;
+		return 0;
 
 	if (this->_method == "GET")
-		this->HandleGet();
+		return this->HandleGet();
 	else if (this->_method == "POST")
-		this->HandlePost(body);
+		return this->HandlePost(body, bytesreceived);
 	else if (this->_method == "DELETE")
-		this->HandleDelete();
-
+		return this->HandleDelete();
+	return 0;
 }
 
 // Check for Possible error in the Request
@@ -299,10 +278,10 @@ bool Handler::matchLocation()
 		return false;
 	}
 
-	//std::cout << "uri is : " << this->_uri << '\n';
+	// std::cout << "uri is : " << this->_uri << '\n';
 	_path = GetRootLocation(this->_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
 	//_path += '/';
-	//std::cout << "Path is : " << _path << '\n';
+	// std::cout << "Path is : " << _path << '\n';
 	// If location not found send a "not found" response
 	// if (i == serverLocations.size())
 	// {
@@ -329,9 +308,12 @@ bool Handler::validateURI(const std::string &uri)
 
 // -------------------------------- POST method ----------------------
 
-void Handler::HandlePost(char *body)
+int Handler::HandlePost(char *body, int bytesreceived)
 {
-	(void)body;
+	static int rec = 0;
+	rec += bytesreceived;
+	if (bytesreceived == 0)
+		return 0;
 	std::string encodingFormat, boundary;
 	std::string mimeType = "application/octet-stream"; // Default MIME type
 	// Save MIME type and boundary if it exist
@@ -353,86 +335,49 @@ void Handler::HandlePost(char *body)
 	if (boundary.empty() && encodingFormat.empty())
 	{
 		// Create a file stream for writing
-		std::string fileName = this->_shared.generateFileName("upload/", this->_shared.file_extensions[mimeType]);
-		std::ofstream file(fileName, std::ios::out | std::ios::binary);
-		if (!file)
+		if (this->headerflag == 0)
 		{
-			std::cerr << "Error : Failed to open file\n";
-			exit(1);
+			std::string fileName = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
+			this->_postFileFd = open(fileName.c_str(), O_CREAT | O_WRONLY | O_APPEND , 0777);
+			if (this->_postFileFd < 0)
+			{
+				this->sendErrorResponse("500");
+				return 0;
+			}
 		}
-		else
-		{
-			// Write the request body data to the file
-			file.write(body, std::stoull(this->_req_header["Content-Length"]) * 100);
+		// std::cerr << "write " <<
+		// Write the request body data to the file
+		write(this->_postFileFd, body, bytesreceived);
 
-			// Close the file
-			file.close();
-
-			// File saved successfully
-		}
+		// File saved successfully
 	}
-	this->sendFileResponse("200", "test/homepage.html");
+	// std::cerr << "total rec in post " << rec << std::endl;
+	if (bytesreceived < CHUNK_SIZE)
+	{
+		this->sendResponseHeader("200", "", "", 0);
+		rec = 0;
+		return 0;
+	}
+	return 1;
 }
 
 // -------------------------------- GET method ----------------------
 
-// Send a respone with [statusCode] in the header and content of the file in [path] as body
-void Handler::sendFileResponse(std::string statusCode, std::string path)
-{
-	(void)statusCode;
-	std::string fileExt, content;
-
-	fileExt = path.substr(path.find_last_of('.'), path.length());
-	std::ifstream file(path.c_str());
-	std::stringstream buffer;
-	if (file)
-	{
-		buffer << file.rdbuf();
-		content = buffer.str();
-		file.close();
-	}
-	else
-	{
-		this->sendErrorResponse("500");
-		return;
-	}
-
-	// sendResponseHeader(statusCode, fileExt, "", content.length());
-
-	if (send(this->client_socket, content.c_str(), content.length(), 0) == -1)
-	{
-		perror("Error : Sending failed");
-	}
-}
-
-void Handler::HandleGet()
+int Handler::HandleGet()
 {
 	static int a = 0;
 
 	// std::cout << "Header flag is " << this->headerflag << '\n';
-	std::cout << "\n" << a << " = " << _path << "\n";
+	std::cout << "\n"
+			  << a << " = " << _path << "\n";
 
 	// TODO: Function to match the location, takes locationsVec, and uri , and should return the closest match
-	//int RepStrPos;
+	// int RepStrPos;
 	size_t i = 0;
 	std::string RealPath, tmp_str, DirStr, UriInit;
 	struct stat s, t;
 
 	UriInit = _uri;
-
-	// RepStrPos = _uri.find_first_of(this->_workingLocation.GetLocationPath());
-	// if (RepStrPos < 0)
-	// {
-	// 	std::cout << "I entred here\n";
-	// 	this->sendErrorResponse("404");
-	// }
-	// else
-	// 	_uri = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
-	//std::cout << "GetRootLocation been called\n";
-	//matchstd::cout << _uri << "\n";
-	//exit(0);
-	//_uri.replace(0, this->_workingLocation.GetLocationPath().length(), this->_workingLocation.GetRoot());
-
 
 	if (stat(_path.c_str(), &s) == 0)
 	{
@@ -518,15 +463,10 @@ void Handler::HandleGet()
 				if (bytesread == -1)
 					perror("Error (Read) -> ");
 				bytessent = send(this->client_socket, buffer, bytesread, 0);
-				if (bytessent == -1)
+				if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
 				{
-					// DropClient();
+					return 0;
 					perror("Error (Send) -> ");
-				}
-				if (bytessent == 0 || bytesread == 0)
-				{
-					perror("Error (Send) -> ");
-					// DropClient();
 				}
 			}
 		}
@@ -534,10 +474,10 @@ void Handler::HandleGet()
 	}
 	else
 	{
-
 		this->sendErrorResponse("404");
 	}
 	a++;
+	return 1;
 }
 
 // -------------------------------- Delete method ----------------------
@@ -600,13 +540,12 @@ void Handler::DeleteFile(const char *path)
 		perror("Unlink -> ");
 }
 
-void Handler::HandleDelete()
+int Handler::HandleDelete()
 {
 	struct stat file;
 	std::string path = this->_path;
 
-	//path = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
-
+	// path = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
 
 	if (stat(path.c_str(), &file) == 0)
 	{
@@ -637,7 +576,7 @@ void Handler::HandleDelete()
 				{
 					//  Check on index file validation
 					// if (check index file)
-						// Run CGI
+					// Run CGI
 					// else
 					// {
 					// 	sendErrorResponse("403");
@@ -652,4 +591,5 @@ void Handler::HandleDelete()
 	}
 	else
 		std::cerr << "File or Directory doesn't exist :(" << std::endl;
+	return 0;
 }

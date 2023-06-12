@@ -108,6 +108,8 @@ void Server::Start()
     // Iterate over servers 
     while (TRUE)
     {
+        // if (flag == 0)
+        //     itb->_client_hanlder.setConfig(this->_config);
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
         activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
@@ -122,6 +124,7 @@ void Server::Start()
 
         for (itb = _clients.begin(); itb != _clients.end(); itb++)
         {
+            client_write_ready = false;
             // Calling driver function in client handler that takes the requested data and the flag /
             active_clt = itb->GetCltSocket();
             if (FD_ISSET(active_clt, &tmpfdsread))
@@ -133,16 +136,13 @@ void Server::Start()
                     DropClient();
                     continue;
                 }
-                else
-                {
-                    client_write_ready = true;
-                }
+                client_write_ready = true;
             }
 
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
             {
                 itb->_client_hanlder.setConfig(this->_config);
-                itb->_client_hanlder.Driver(requested_data);
+                itb->_client_hanlder.Driver(requested_data, bytesreceived);
             }
             flag++;
         }
