@@ -189,3 +189,17 @@ std::string Shared::generateFileName(const std::string& path, const std::string&
 
     return fileName;
 }
+
+std::string Shared::fileExtention(std::string fileName)
+{
+	std::string extention;
+	int	dot_position = fileName.find_last_of('.');
+    
+	if (dot_position > 0)
+	{
+        extention = fileName.substr(dot_position ,fileName.length());
+		return (extention);
+	}
+	else
+		return ("n/a");
+}

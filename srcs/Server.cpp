@@ -32,16 +32,6 @@ void    Server::CreateServer()
        Error("Error: Listening failed -> ");
 }
 
-void Server::SendResponseHeader(int clt_skt)
-{
-    char response_header[] = "HTTP/1.1 200 OK\r\n"
-                                "Server: Allah Y7ssen L3wan\r\n"
-                                "Content-Length: 82013359\r\n"
-                                "Content-Type: video/mp4\r\n\r\n";
-    if (send(clt_skt, response_header, strlen(response_header), 0) == -1)
-        Error("Error (Send) -> ");
-}
-
 void Server::DropClient()
 {
     close(active_clt);
@@ -65,26 +55,6 @@ int Server::AcceptAddClientToSet()
         maxfds = _clients.back().GetCltSocket();
     return (newconnection);
 }
-
-
-// void    Server::ReadAndSend()
-// {
-//     // Continue running even if the write/send operation fails due to a closed/invalid socket
-//     // signal(SIGPIPE, SIG_IGN);
-//     bytesread = read(itb->GetCltFd(), buffer, sizeof(buffer));
-//     if (bytesread == -1)
-//         Error("Error (Read) -> ");
-//     bytessent = send(active_clt, buffer, bytesread, 0);
-//     if (bytessent == -1)
-//     {
-//         DropClient();
-//         Error("Error (Send) -> ");
-//     }
-//     if (bytessent == 0 || bytesread == 0)
-//     {
-//         DropClient();
-//     }
-// }
 
 void Server::SelectSetsInit()
 {
@@ -119,12 +89,10 @@ void Server::Start()
         {
             client_socket = AcceptAddClientToSet();
         }
-
         // std::cout << "List Size -> " << _clients.size() << "\n";
-
         for (itb = _clients.begin(); itb != _clients.end(); itb++)
         {
-            client_write_ready = false;
+            // client_write_ready = false;
             // Calling driver function in client handler that takes the requested data and the flag /
             active_clt = itb->GetCltSocket();
             if (FD_ISSET(active_clt, &tmpfdsread))
@@ -136,7 +104,10 @@ void Server::Start()
                     DropClient();
                     continue;
                 }
-                client_write_ready = true;
+                else
+                {
+                    client_write_ready = true;
+                }
             }
 
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)

@@ -23,6 +23,7 @@ class Shared
     	std::map<std::string, std::string> mime_types;
     	std::map<std::string, std::string> file_extensions;
     	std::map<std::string, std::string> status_codes;
+		std::string fileExtention(std::string fileName);
 };
 
 class Exceptions : public std::exception

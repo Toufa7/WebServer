@@ -9,3 +9,4 @@ Makefile
 Server.dSYM
 .idea
 .DS_Store
+conf

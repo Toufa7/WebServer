@@ -367,7 +367,6 @@ int Handler::HandleGet()
 {
 	static int a = 0;
 
-	// std::cout << "Header flag is " << this->headerflag << '\n';
 	std::cout << "\n"
 			  << a << " = " << _path << "\n";
 
@@ -443,6 +442,8 @@ int Handler::HandleGet()
 		else if (s.st_mode & S_IFREG)
 		{
 			std::cout << "--- here 2 ----\n";
+
+			
 			if (this->_workingLocation.GetCgiInfo().path != "n/a")
 			{
 				// std::cout << " HAHSKJAHSKJHAKJSHKAJH\n";
@@ -465,17 +466,15 @@ int Handler::HandleGet()
 				bytessent = send(this->client_socket, buffer, bytesread, 0);
 				if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
 				{
-					return 0;
 					perror("Error (Send) -> ");
+					return 0;
 				}
 			}
 		}
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 	}
 	else
-	{
 		this->sendErrorResponse("404");
-	}
 	a++;
 	return 1;
 }

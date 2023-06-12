@@ -1,6 +1,7 @@
 NAME = Server
 CC = c++
-CFLAGS = -std=c++98 -Wall -Wextra -Werror -g -fsanitize=address
+CFLAGS = -std=c++98 -Wall -Wextra -Werror #-g -fsanitize=address
+MKFL = Makefile
 
 FILES = main.cpp \
 	srcs/Server.cpp \
@@ -17,7 +18,7 @@ HEADERS = includes/Server.hpp \
 
 all : $(NAME)
 
-$(NAME): $(FILES) $(HEADERS)
+$(NAME): $(FILES) $(HEADERS) $(MKFL)
 		$(CC) $(CFLAGS) $(FILES) -o $(NAME)
 
 clean:
