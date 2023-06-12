@@ -345,14 +345,13 @@ int Handler::HandlePost(char *body, int bytesreceived)
 				return 0;
 			}
 		}
-		// std::cerr << "write " <<
 		// Write the request body data to the file
 		write(this->_postFileFd, body, bytesreceived);
 
 		// File saved successfully
 	}
 	// std::cerr << "total rec in post " << rec << std::endl;
-	if (bytesreceived < CHUNK_SIZE)
+	if (bytesreceived < CHUNK_SIZE && this->headerflag)
 	{
 		this->sendResponseHeader("200", "", "", 0);
 		rec = 0;

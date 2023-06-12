@@ -90,9 +90,8 @@ void Server::Start()
             client_socket = AcceptAddClientToSet();
         }
         // std::cout << "List Size -> " << _clients.size() << "\n";
-        for (itb = _clients.begin(); itb != _clients.end(); itb++)
+        for (itb = _clients.begin(); itb != _clients.end();)
         {
-            // client_write_ready = false;
             // Calling driver function in client handler that takes the requested data and the flag /
             active_clt = itb->GetCltSocket();
             if (FD_ISSET(active_clt, &tmpfdsread))
@@ -101,13 +100,13 @@ void Server::Start()
                 if (bytesreceived < 1)
                 {
                     std::cerr << "Recv (-1) : Connection Closed -> " << active_clt << std::endl;
+                    std::list<Client>::iterator tmp = itb;
+                    tmp++;
                     DropClient();
+                    itb = tmp;
                     continue;
                 }
-                else
-                {
-                    client_write_ready = true;
-                }
+                client_write_ready = true;
             }
 
             if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
@@ -115,8 +114,10 @@ void Server::Start()
                 itb->_client_hanlder.setConfig(this->_config);
                 itb->_client_hanlder.Driver(requested_data, bytesreceived);
             }
+            itb++;
             flag++;
         }
+
     }
     close(server_socket);
 }
