@@ -33,9 +33,7 @@ class Server
     private:
         ServerConfig                _config;
         std::list<Client>           _clients;
-        std::list<Client>::iterator it;
         std::list<Client>::iterator itb;
-        std::list<Client>::iterator ite;
 
     public:
         Server(){};
