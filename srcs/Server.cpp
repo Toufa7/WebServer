@@ -11,8 +11,6 @@ void    Server::Init()
     server_infos.ai_family      = AF_INET;
     server_infos.ai_socktype    = SOCK_STREAM;
     server_infos.ai_flags       = AI_PASSIVE;
-    // std::cout << "Host => " << this->_config.GetHost().c_str() << std::endl;
-    // std::cout << "Port => " << std::to_string(this->_config.GetPort()).c_str() << std::endl;
     getaddrinfo(this->_config.GetHost().c_str(), std::to_string(this->_config.GetPort()).c_str(), &server_infos, &sinfo_ptr);
 }
 
@@ -20,13 +18,15 @@ void    Server::CreateServer()
 {
     Init();
     if ((server_socket = socket(sinfo_ptr->ai_family, sinfo_ptr->ai_socktype, sinfo_ptr->ai_protocol)) == -1)
-       perror("Error: Socket failed -> ");
+       perror("Error: SOCKET failed -> ");
     int optval = 1;
-    setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1)
+       perror("Error: SETSOCKOPT failed -> ");
     if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
-       perror("Error: Binding failed -> ");
+       perror("Error: BIND failed -> ");
     if (listen(server_socket, 10) == -1)
-       perror("Error: Listening failed -> ");
+       perror("Error: LISTEN failed -> ");
+    freeaddrinfo(sinfo_ptr);
 }
 
 void Server::DropClient()
@@ -42,7 +42,7 @@ int Server::AcceptAddClientToSet()
     int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
     fcntl(newconnection, F_SETFL, O_NONBLOCK);
     if (newconnection == -1)
-        perror("Error: Accepting Failed -> ");
+        perror("Error: ACCEPT Failed -> ");
     _clients.push_back(Client(newconnection));
     readyforwrite = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
@@ -94,10 +94,17 @@ void Server::Start()
             // Socket is ready for reading
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
+                signal(SIGPIPE, SIG_IGN);
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
-                if (bytesreceived < 1)
+                if (bytesreceived == 0)
                 {
-                    std::cerr << "Recv (-1) : Connection Closed -> " << active_clt << std::endl;
+                    std::cerr << "Connection Closed by peer (No more data will be received)" << std::endl;
+                    DropClient();
+                    continue;
+                }
+                else if (bytesreceived < 0)
+                {
+                    perror("Error: Recv failed -> ");
                     DropClient();
                     continue;
                 }
