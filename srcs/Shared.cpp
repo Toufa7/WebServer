@@ -59,6 +59,7 @@ Shared::Shared()
 	this->file_extensions["application/x-font-opentype"] = ".otf";
 	this->file_extensions["application/vnd.ms-fontobject"] = ".eot";
 	this->file_extensions["application/octet-stream"] = ".bin";
+	this->file_extensions[""] = "";
 
 	// MIME Types
 	this->mime_types[".html"]	= "text/html";

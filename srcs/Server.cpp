@@ -99,15 +99,9 @@ void Server::Start()
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
-                if (bytesreceived == 0)
+                if (bytesreceived < 1)
                 {
-                    std::cerr << "Connection Closed by peer (No more data will be received)" << std::endl;
-                    DropClient();
-                    continue;
-                }
-                else if (bytesreceived < 0)
-                {
-                    perror("Error : Recv failed -> ");
+                    std::cerr << "Connection has ended" << std::endl;
                     DropClient();
                     continue;
                 }
