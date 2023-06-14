@@ -1,11 +1,5 @@
 #include "../includes/Server.hpp"
 
-void    Error(const char *msg)
-{
-    perror(msg);
-    // exit(1);
-}
-
 Server::Server(ServerConfig &config)
 {
     this->_config = config;
@@ -15,21 +9,24 @@ void    Server::Init()
 {
     memset(&server_infos, 0, sizeof(server_infos));
     server_infos.ai_family      = AF_INET;
-    server_infos.ai_protocol    = SOCK_STREAM;
+    server_infos.ai_socktype    = SOCK_STREAM;
+    server_infos.ai_flags       = AI_PASSIVE;
+    // std::cout << "Host => " << this->_config.GetHost().c_str() << std::endl;
+    // std::cout << "Port => " << std::to_string(this->_config.GetPort()).c_str() << std::endl;
     getaddrinfo(this->_config.GetHost().c_str(), std::to_string(this->_config.GetPort()).c_str(), &server_infos, &sinfo_ptr);
 }
 
 void    Server::CreateServer()
 {
     Init();
-    if ((server_socket = socket(sinfo_ptr->ai_family, sinfo_ptr->ai_protocol, 0)) == -1)
-       Error("Error: Creating socket failed -> ");
+    if ((server_socket = socket(sinfo_ptr->ai_family, sinfo_ptr->ai_socktype, sinfo_ptr->ai_protocol)) == -1)
+       perror("Error: Socket failed -> ");
     int optval = 1;
     setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval));
     if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
-       Error("Error: Binding failed -> ");
-    if (listen(server_socket, FD_SETSIZE) == -1)
-       Error("Error: Listening failed -> ");
+       perror("Error: Binding failed -> ");
+    if (listen(server_socket, 10) == -1)
+       perror("Error: Listening failed -> ");
 }
 
 void Server::DropClient()
@@ -37,8 +34,7 @@ void Server::DropClient()
     close(active_clt);
     FD_CLR(active_clt, &readfds);
     FD_CLR(active_clt, &writefds);
-    _clients.erase(itb);
-    //close(itb->GetCltFd());
+    _clients.erase(itb++);
 }
 
 int Server::AcceptAddClientToSet()
@@ -46,9 +42,9 @@ int Server::AcceptAddClientToSet()
     int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
     fcntl(newconnection, F_SETFL, O_NONBLOCK);
     if (newconnection == -1)
-        Error("Error (Accept) -> ");
+        perror("Error: Accepting Failed -> ");
     _clients.push_back(Client(newconnection));
-    client_write_ready = false;
+    readyforwrite = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
     FD_SET(_clients.back().GetCltSocket(), &writefds);
     if (_clients.back().GetCltSocket() > maxfds)
@@ -71,53 +67,54 @@ void Server::SelectSetsInit()
 
 void Server::Start()
 {
-    int flag = 0; 
     CreateServer();
     SelectSetsInit();
     bytesreceived = 0;
-    // Iterate over servers 
     while (TRUE)
     {
-        // if (flag == 0)
-        //     itb->_client_hanlder.setConfig(this->_config);
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
+        /*
+            ! Waiting for an activity
+        */
         activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
         if (activity == -1)
-           Error("Error (Select) -> ");
+           perror("Error: Select Failed -> ");
+        /* 
+            ^ Catching an activity and Accepting the new conenction
+        */
         if (FD_ISSET(server_socket, &tmpfdsread))
         {
             client_socket = AcceptAddClientToSet();
         }
-        // std::cout << "List Size -> " << _clients.size() << "\n";
+        std::cout << "Currently working on => " << client_socket << std::endl;
         for (itb = _clients.begin(); itb != _clients.end();)
         {
-            // Calling driver function in client handler that takes the requested data and the flag /
             active_clt = itb->GetCltSocket();
+            // Socket is ready for reading
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
                 if (bytesreceived < 1)
                 {
                     std::cerr << "Recv (-1) : Connection Closed -> " << active_clt << std::endl;
-                    std::list<Client>::iterator tmp = itb;
-                    tmp++;
                     DropClient();
-                    itb = tmp;
                     continue;
                 }
-                client_write_ready = true;
+                else
+                {
+                    readyforwrite = true;
+                }
             }
 
-            if (FD_ISSET(active_clt, &tmpfdswrite) && client_write_ready)
+            // Socket is ready for writing
+            if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
             {
                 itb->_client_hanlder.setConfig(this->_config);
                 itb->_client_hanlder.Driver(requested_data, bytesreceived);
             }
             itb++;
-            flag++;
         }
-
     }
     close(server_socket);
 }

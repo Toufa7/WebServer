@@ -59,7 +59,7 @@ class Server
         int                     bytesread, bytessent, videosize, bytesreceived, idx;
         fd_set                  readfds, writefds, tmpfdsread, tmpfdswrite;
         int                     maxfds, activity, active_clt;
-        bool                    client_write_ready;
+        bool                    readyforwrite;
         struct timeval          timeout;
 
     

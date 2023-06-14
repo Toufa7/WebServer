@@ -58,8 +58,7 @@ void Handler::printRequstData()
 
 std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
 {
-	std::cout << "GetRootLocation been called\n";
-	std::cout << "URI is -> " << uri << std::endl;
+	std::cout << "URI =>	" << uri << std::endl;
 	std::string MatchedUri;
 	if (uri.find(locationPath) != std::string::npos)
 	{
@@ -364,11 +363,6 @@ int Handler::HandlePost(char *body, int bytesreceived)
 
 int Handler::HandleGet()
 {
-	static int a = 0;
-
-	std::cout << "\n"
-			  << a << " = " << _path << "\n";
-
 	// TODO: Function to match the location, takes locationsVec, and uri , and should return the closest match
 	// int RepStrPos;
 	size_t i = 0;
@@ -379,7 +373,6 @@ int Handler::HandleGet()
 
 	if (stat(_path.c_str(), &s) == 0)
 	{
-		std::cout << "--- here 1 ----\n";
 		/*------------------------------------------- DIR Handler ----------------------------------------------------*/
 		if (s.st_mode & S_IFDIR)
 		{
@@ -440,9 +433,6 @@ int Handler::HandleGet()
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 		else if (s.st_mode & S_IFREG)
 		{
-			std::cout << "--- here 2 ----\n";
-
-			
 			if (this->_workingLocation.GetCgiInfo().path != "n/a")
 			{
 				// std::cout << " HAHSKJAHSKJHAKJSHKAJH\n";
@@ -450,7 +440,6 @@ int Handler::HandleGet()
 			}
 			else
 			{
-				std::cout << "--- here 3 ----\n";
 				struct stat file;
 				if (this->headerflag == 0)
 				{
@@ -460,9 +449,11 @@ int Handler::HandleGet()
 					sendResponseHeader("200", filext, "", file.st_size);
 				}
 				bytesread = read(requested_file, buffer, sizeof(buffer));
+				// std::cout << "Read -> "<< bytesread << std::endl;
 				if (bytesread == -1)
 					perror("Error (Read) -> ");
 				bytessent = send(this->client_socket, buffer, bytesread, 0);
+				// std::cout << "Send -> "<< bytessent << std::endl;
 				if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
 				{
 					perror("Error (Send) -> ");
@@ -474,7 +465,6 @@ int Handler::HandleGet()
 	}
 	else
 		this->sendErrorResponse("404");
-	a++;
 	return 1;
 }
 
@@ -482,10 +472,10 @@ int Handler::HandleGet()
 
 void Handler::DeleteDirectory(const char *path)
 {
-	DIR *directory;
-	struct dirent *dir;
-	struct stat file;
-	char subdir[256];
+	DIR				*directory;
+	struct dirent	*entry;
+	struct stat		file;
+	char 			subdir[256];
 
 	// open a directory
 	if ((directory = opendir(path)) == NULL)
@@ -494,11 +484,11 @@ void Handler::DeleteDirectory(const char *path)
 		return;
 	}
 	// read the contents of the directory
-	while ((dir = readdir(directory)) != NULL)
+	while ((entry = readdir(directory)) != NULL)
 	{
-		if (strcmp(dir->d_name, ".") == 0 || strcmp(dir->d_name, "..") == 0)
+		if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
 			continue;
-		snprintf(subdir, sizeof(subdir), "%s/%s", path, dir->d_name);
+		snprintf(subdir, sizeof(subdir), "%s/%s", path, entry->d_name);
 		if (stat(subdir, &file) == 0)
 		{
 			if (S_ISREG(file.st_mode))
@@ -588,6 +578,10 @@ int Handler::HandleDelete()
 		}
 	}
 	else
+	{
 		std::cerr << "File or Directory doesn't exist :(" << std::endl;
+		sendErrorResponse("404");
+		return 0;
+	}
 	return 0;
 }
