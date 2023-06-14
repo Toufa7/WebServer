@@ -312,10 +312,8 @@ bool Handler::validateURI(const std::string &uri)
 
 int Handler::HandlePost(char *body, int bytesreceived)
 {
-	static int rec = 0;
-	rec += bytesreceived;
-	if (bytesreceived == 0)
-		return 0;
+	static long long recv = 0;
+	recv += bytesreceived;
 	std::string encodingFormat, boundary;
 	std::string mimeType = "application/octet-stream"; // Default MIME type
 	// Save MIME type and boundary if it exist
@@ -331,10 +329,19 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		else
 			mimeType = this->_req_header["Content-Type"];
 	}
-	// Save Transfer-Encoding if it exist.
-	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
-		encodingFormat = this->_req_header["Transfer-Encoding"];
-	if (boundary.empty() && encodingFormat.empty())
+	if (!boundary.empty())
+	{
+		// TODO: boundry
+		std::cerr << "Post boundry\n";
+		return 0;
+	}
+	else if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
+	{
+		// TODO: chunked
+		std::cerr << "Post chunked\n";
+		return 0;
+	}
+	else if (boundary.empty() && encodingFormat.empty())
 	{
 		// Create a file stream for writing
 		if (this->headerflag == 0)
@@ -350,13 +357,13 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		// Write the request body data to the file
 		write(this->_postFileFd, body, bytesreceived);
 
-		// File saved successfully
-	}
-	// std::cerr << "total rec in post " << rec << std::endl;
-	if (bytesreceived < CHUNK_SIZE && this->headerflag)
-	{
-		this->sendResponseHeader("200", "", "", 0);
-		rec = 0;
+		// std::cerr << "total rec in post " << rec << std::endl;
+		if (recv >= std::stoll(this->_req_header["Content-Length"]))
+		{
+			this->sendResponseHeader("201", "", "", 0);
+			close(this->_postFileFd);
+			return 0;
+		}
 	}
 	return 1;
 }
