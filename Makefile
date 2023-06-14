@@ -8,6 +8,7 @@ FILES = main.cpp \
 	srcs/Handler.cpp \
 	srcs/Shared.cpp \
 	srcs/Config.cpp \
+	srcs/Cgi.cpp \
 
 HEADERS = includes/Server.hpp \
 	includes/Client.hpp \

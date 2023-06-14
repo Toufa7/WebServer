@@ -1,15 +1,13 @@
-#include <iostream>
-#include <fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <unistd.h>
-#include <stdio.h>
-#include <string.h>
-#include <string>
-#include <fstream>
-#include <cstdlib>
-#include <sstream>
-#include <sys/stat.h>
+#include "../includes/Handler.hpp"
+
+//TO DO
+
+//client should save the opened tmp file fd : done
+//content lenght POST : need to be tested cause it may not be necessary
+//body size
+//leaks:done
+//remove cgi file when done:done
+//check sys calls for error returns
 
 std::string CgiHeaderFindStatus(std::string Header)
 {
@@ -36,102 +34,152 @@ std::string CgiHeaderFindStatus(std::string Header)
 
 std::string CgiBodySize(int BodySize)
 {
+    //cgi body size
     std::string ContentLenght;
-    struct stat FileStat;
+    // struct stat FileStat;
 
     ContentLenght = "Content-Length: ";
-    int StatReturn = stat("CGIout", &FileStat);
-    if (StatReturn == 0)
-        ContentLenght += std::to_string((BodySize));
-    else
-        ContentLenght += "0";
+    // int StatReturn = stat(tmpfilename.c_str(), &FileStat);
+    // if (StatReturn == 0)
+    ContentLenght += std::to_string((BodySize));
+    // else
+    //     ContentLenght += "0";
     ContentLenght += "\r\n";
+    
     return (ContentLenght);
 }
 
-char **CgiSetEnv(char **oldEnv)
+char **Handler::CgiSetEnv(std::string method)
 {
     std::string SERVER_PROTOCOL = "SERVER_PROTOCOL=HTTP/1.1",
                 REDIRECT_STATUS = "REDIRECT_STATUS=200",
                 GATEWAY_INTERFACE = "GATEWAY_INTERFACE=CGI/1.1",
-                SCRIPT_NAME = "SCRIPT_NAME=Script.php",
-                REQUEST_METHOD = "REQUEST_METHOD = GET";
-                
-                // SCRIPT_FILENAME = "",
-                // PATH_INFO = "",
-                // QUERY_STRING = "",
-                
+                SCRIPT_NAME = "SCRIPT_NAME=",
+                REQUEST_METHOD = "REQUEST_METHOD=",
+                SCRIPT_FILENAME = "SCRIPT_FILENAME=",
+                PATH_INFO = "PATH_INFO=",
+                QUERY_STRING = "QUERY_STRING=";
                 //For Post only
                 //CONTENT_TYPE = "CONTENT_TYPE=",
                 //CONTENT_LENGTH = "CONTENT_LENGTH=";
+    REQUEST_METHOD += method;
+    SCRIPT_FILENAME += this->_path.substr(_path.find_last_of('/', 0), _path.length());
+    SCRIPT_NAME += this->_path.substr(_path.find_last_of('/', 0), _path.length());
+    PATH_INFO += this->_path;
 
-    char **newEnv = new char*[5];
-    
+    if (!this->_querystring.empty())
+        QUERY_STRING += this->_querystring;
+    char **newEnv = new char*[9];
+
     newEnv[0] = new char[SERVER_PROTOCOL.length()];
     newEnv[1] = new char[REDIRECT_STATUS.length()];
     newEnv[2] = new char[GATEWAY_INTERFACE.length()];
     newEnv[3] = new char[SCRIPT_NAME.length()];
     newEnv[4] = new char[REQUEST_METHOD.length()];
+    newEnv[5] = new char[SCRIPT_FILENAME.length()];
+    newEnv[6] = new char[PATH_INFO.length()];
+    newEnv[7] = new char[QUERY_STRING.length()];
 
     memcpy(newEnv[0], SERVER_PROTOCOL.c_str(), SERVER_PROTOCOL.length());
     memcpy(newEnv[1], REDIRECT_STATUS.c_str(), REDIRECT_STATUS.length());
     memcpy(newEnv[2], GATEWAY_INTERFACE.c_str(), GATEWAY_INTERFACE.length());
     memcpy(newEnv[3], SCRIPT_NAME.c_str(), SCRIPT_NAME.length());
     memcpy(newEnv[4], REQUEST_METHOD.c_str(), REQUEST_METHOD.length());
-    newEnv[5] = NULL;
+    memcpy(newEnv[5], SCRIPT_FILENAME.c_str(), SCRIPT_FILENAME.length());
+    memcpy(newEnv[6], PATH_INFO.c_str(), PATH_INFO.length());
+    memcpy(newEnv[7], QUERY_STRING.c_str(), QUERY_STRING.length());
+    newEnv[8] = NULL;
 
     return (newEnv);
 }
 
-int main(int ac, char **av, char **env)
+int Handler::HandleCgi(std::string path, std::string method, int header_flag)
 {
-
-    char **newEnv = CgiSetEnv(env);
-    // for (int i = 0; newEnv[i] != NULL; i++)
-    //     std::cout << "Env[" << i <<"] : " << newEnv[i] << '\n';
-
-    //system("leaks a.out");
-    int outFd, OutFdOpen, Status_pos, BodyPos;
-    std::string Buf, TmpStr, Header, Body;
+    int outFd, BodyPos;
+    std::string Buf, TmpStr, Header, Body, tmpfilename;
     std::ifstream TmpOutFile;
+    std::ofstream ParsedTmpOutFile;
     std::stringstream Response;
+    struct stat s;
 
-    outFd = open("CGIout", O_CREAT | O_RDWR | O_TRUNC , 0777);
-    char *excearr[] = {"php-cgi", "script.php", NULL};
-    
-    pid_t CID = fork();
-    if (CID == 0)
+    if (stat(path.c_str(), &s) == 0 && (s.st_mode & S_IFREG))
     {
-        dup2(outFd, 1);
-        dup2(outFd, 2);
-        close(outFd);
-        execve(excearr[0], excearr, newEnv);
+        if (header_flag == 0)
+        {
+            char **newEnv = CgiSetEnv(method); 
+            tmpfilename = "tmpfiles/";
+            tmpfilename = this->_shared.generateFileName("tmpfiles/", ".tmp");
+            outFd = open(tmpfilename.c_str(), O_CREAT | O_RDWR | O_TRUNC , 0777);
+            if (outFd < 0)
+                this->sendErrorResponse("500");
+            //this may cause back and forth calling if you add return
+            this->_cgiTmpFilefd = outFd;
+            this->_cgiTmpFileName = tmpfilename;
+
+            char *excearr[] = {const_cast<char *>(this->_workingLocation.GetCgiInfo().path.c_str()), const_cast<char *>(path.c_str()), NULL};
+            pid_t CID = fork();
+            if (CID == 0)
+            {
+                dup2(outFd, 1);
+                dup2(outFd, 2);
+                close(outFd);
+                execve(excearr[0], excearr, newEnv);
+            }
+            
+            for (unsigned int i = 0; newEnv[i] != NULL; i++)
+                delete newEnv[i];
+            delete newEnv;
+            
+            
+            waitpid(CID, 0, WNOHANG);
+            
+            TmpOutFile.open(this->_cgiTmpFileName.c_str());
+            if (!TmpOutFile)
+                std::cout << "The file could not be opened properly\n";
+            while ( TmpOutFile )
+            {
+                std::getline(TmpOutFile, TmpStr);
+                Buf += TmpStr += '\n';
+            }
+            TmpOutFile.close();
+
+            Header = Buf.substr(0, Buf.find("\r\n\r\n"));
+            BodyPos = Buf.find("<!DOCTYPE html>");
+            if (BodyPos >= 0)
+            {
+                Body = Buf.substr(BodyPos, (Buf.length() - BodyPos));
+                Header += '\n';
+                Header.insert(0, CgiHeaderFindStatus(Header));
+                Header.insert(Header.length(), CgiBodySize(Body.length()));
+
+            }
+            ParsedTmpOutFile.open(tmpfilename);
+            ParsedTmpOutFile << Header;
+            if (BodyPos >= 0)
+                ParsedTmpOutFile << Body;
+        }
+
+        if (header_flag >= 0)
+        {
+            bytesread = read(this->_cgiTmpFilefd, buffer, sizeof(buffer));
+            if (bytesread == -1)
+                perror("Error (Read) -> ");
+            bytessent = send(this->client_socket, buffer, bytesread, 0);
+            if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
+            {
+                perror("Error (Send) -> ");
+                close(this->_cgiTmpFilefd);
+                remove(tmpfilename.c_str());
+                return (0);
+            }
+        }
     }
-
-    wait(NULL);
-
-    TmpOutFile.open("CGIout");
-    if (!TmpOutFile)
-        std::cout << "The file could not be opened properly\n";
-    while ( TmpOutFile )
-    {
-        std::getline(TmpOutFile, TmpStr);
-        Buf += TmpStr += '\n';
-    }
-    TmpOutFile.close();
-
-    Header = Buf.substr(0, Buf.find("\r\n\r\n"));
-    BodyPos = Buf.find("<!DOCTYPE html>");
-    if (BodyPos >= 0)
-        Body = Buf.substr(BodyPos, (Buf.length() - BodyPos));
-    std::cout << Body;
-
-    Header += '\n';
-    Header.insert(0, CgiHeaderFindStatus(Header));
-    Header.insert(Header.length(), CgiBodySize(Body.length()));
-    
-   //std::cout << Header;
+    else
+        this->sendErrorResponse("404");
+    return (1);
 }
+
+
 
 // SERVER_PROTOCOL=HTTP/1.1
 // REDIRECT_STATUS=200
