@@ -150,7 +150,9 @@ void Handler::sendErrorResponse(std::string statusCode)
 	}
 	sendResponseHeader(statusCode, ".html", "", htmlContent.length());
 	if (send(this->client_socket, htmlContent.c_str(), htmlContent.length(), 0) == -1)
-		perror("Error : Sending failed -> ");
+	{
+		perror("Error : Sending Response failed -> ");
+	}
 }
 
 // -------------------------------- Request parse and validation ------------
@@ -423,7 +425,7 @@ int Handler::HandleGet()
 							sendResponseHeader("200", ".html", "", lsDir.length());
 						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
 						{
-							perror("Error : Sending failed");
+							perror("Error : Sending (LstDir) failed");
 							return (0);
 						}
 					}

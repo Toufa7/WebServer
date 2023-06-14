@@ -61,7 +61,6 @@ void Server::SelectSetsInit()
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
     FD_SET(server_socket, &readfds);
-    FD_SET(server_socket, &writefds);
     maxfds = server_socket;
 }
 
@@ -73,7 +72,6 @@ void Server::Start()
     bytesreceived = 0;
     while (TRUE)
     {
-        signal(SIGPIPE, SIG_IGN);
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
         /*
@@ -85,6 +83,7 @@ void Server::Start()
         /* 
             ^ Catching an activity and Accepting the new conenction
         */
+        // Always true
         if (FD_ISSET(server_socket, &tmpfdsread))
         {
             client_socket = AcceptAddClientToSet();
@@ -93,6 +92,10 @@ void Server::Start()
         {
             active_clt = itb->GetCltSocket();
             // Socket is ready for reading
+            // std::cout << "Read  " << FD_ISSET(active_clt, &tmpfdsread) << "\n";
+            // std::cout << "Write " << FD_ISSET(active_clt, &tmpfdswrite) << "\n";
+
+
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
@@ -104,7 +107,7 @@ void Server::Start()
                 }
                 else if (bytesreceived < 0)
                 {
-                    perror("Error: Recv failed -> ");
+                    perror("Error : Recv failed -> ");
                     DropClient();
                     continue;
                 }
@@ -120,7 +123,6 @@ void Server::Start()
                 if (itb->_client_hanlder.Driver(requested_data, bytesreceived) == 0)
                 {
                     DropClient();
-                    continue;
                 }
             }
             itb++;
