@@ -1,6 +1,6 @@
 NAME = Server
 CC = c++
-CFLAGS = -std=c++98 -Wall -Wextra -Werror -g -fsanitize=address
+CFLAGS = -std=c++98 -Wall -Wextra -Werror #-g -fsanitize=address
 MKFL = Makefile
 
 FILES = main.cpp \
@@ -8,6 +8,7 @@ FILES = main.cpp \
 	srcs/Handler.cpp \
 	srcs/Shared.cpp \
 	srcs/Config.cpp \
+	srcs/Cgi.cpp \
 
 HEADERS = includes/Server.hpp \
 	includes/Client.hpp \

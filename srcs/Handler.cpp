@@ -240,7 +240,10 @@ bool Handler::matchLocation()
 
 	// Seperate Path from args if there is any
 	if (this->_uri.find('?') != std::string::npos)
+	{
 		_path = this->_uri.substr(0, this->_uri.find('?'));
+		_querystring = this->_uri.substr(this->_uri.find('?') + 1, this->_uri.length());
+	}
 
 	// find the closest location to requested resource
 	for (i = 0; i < serverLocations.size(); i++)
@@ -395,7 +398,7 @@ int Handler::HandleGet()
 			}
 			else
 			{
-				// case of no index file and should check auto index:handled
+				// case of no index file and should check autoindex
 				if (this->_workingLocation.GetAutoIndex() == 1)
 				{
 					DIR *DirPtr;
@@ -422,7 +425,6 @@ int Handler::HandleGet()
 						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
 							perror("Error : Sending failed");
 					}
-					// addi hna l function li radi t handli l auto indexing
 				}
 				else
 					this->sendErrorResponse("403"); // case of no index file and no index file:handled
@@ -435,10 +437,15 @@ int Handler::HandleGet()
 		{
 			if (this->_workingLocation.GetCgiInfo().path != "n/a")
 			{
-				// std::cout << " HAHSKJAHSKJHAKJSHKAJH\n";
 				// handle file cgi
+				if (this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type)
+				{
+					//check call to handle cgi
+					this->HandleCgi(_path, "GET", headerflag);
+				}
 			}
-			else
+
+			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type)//condition that includes also not valid cgi extention
 			{
 				struct stat file;
 				if (this->headerflag == 0)

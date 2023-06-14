@@ -1,4 +1,5 @@
 Subject.pdf
+./Server
 Server
 *.o
 *.mp4
@@ -8,4 +9,4 @@ upload
 *.dSYM
 .idea
 .DS_Store
-conf
+conf/

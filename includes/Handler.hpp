@@ -25,18 +25,21 @@ public:
 	int Driver(char *requested_data, int bytesreceived);
 
 
-	std::string getRequestMethod();
-	std::string getRequestURI();
-	void setConfig(ServerConfig &config);
-	int headerflag;
-	int client_socket;
-	int _postFileFd;
-	std::map<std::string, std::string> _req_header;
+	std::string	getRequestMethod();
+	std::string	getRequestURI();
+	void		setConfig(ServerConfig &config);
+	int			headerflag;
+	int			client_socket;
+	int			_postFileFd;
+    int			_cgiTmpFilefd;
+	std::string	_cgiTmpFileName;
+	std::map<std::string, std::string>	_req_header;
 
 private:
 	std::string _method;
 	std::string _uri; // The Request-URI (Uniform Resource Identifier)
 	std::string _path;
+	std::string _querystring;
 	Shared _shared;
 	ServerConfig _config;
 	ServerLocation _workingLocation;
@@ -48,6 +51,8 @@ private:
 	int HandlePost(char *body, int bytesreceived);
 	int HandleGet();
 	int HandleDelete();
+	int HandleCgi(std::string path, std::string method, int header_flag);
+	char **CgiSetEnv(std::string method);
 	bool validateRequest();
 	bool matchLocation();
 	bool validateURI(const std::string &uri);
