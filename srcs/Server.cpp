@@ -24,7 +24,7 @@ void    Server::CreateServer()
        perror("Error: SETSOCKOPT failed -> ");
     if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
        perror("Error: BIND failed -> ");
-    if (listen(server_socket, 10) == -1)
+    if (listen(server_socket, FD_SETSIZE) == -1)
        perror("Error: LISTEN failed -> ");
     freeaddrinfo(sinfo_ptr);
 }
@@ -44,6 +44,7 @@ int Server::AcceptAddClientToSet()
     if (newconnection == -1)
         perror("Error: ACCEPT Failed -> ");
     _clients.push_back(Client(newconnection));
+    _clients.back()._client_hanlder.setConfig(this->_config);
     readyforwrite = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
     FD_SET(_clients.back().GetCltSocket(), &writefds);
@@ -54,8 +55,8 @@ int Server::AcceptAddClientToSet()
 
 void Server::SelectSetsInit()
 {
-    timeout.tv_sec  = 100;
-    timeout.tv_usec = 100;
+    // timeout.tv_sec  = 100;
+    // timeout.tv_usec = 100;
     
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
@@ -72,12 +73,13 @@ void Server::Start()
     bytesreceived = 0;
     while (TRUE)
     {
+        signal(SIGPIPE, SIG_IGN);
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
         /*
             ! Waiting for an activity
         */
-        activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
+        activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, NULL);
         if (activity == -1)
            perror("Error: Select Failed -> ");
         /* 
@@ -87,14 +89,12 @@ void Server::Start()
         {
             client_socket = AcceptAddClientToSet();
         }
-        std::cout << "Currently working on => " << client_socket << std::endl;
         for (itb = _clients.begin(); itb != _clients.end();)
         {
             active_clt = itb->GetCltSocket();
             // Socket is ready for reading
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
-                signal(SIGPIPE, SIG_IGN);
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
                 if (bytesreceived == 0)
                 {
@@ -117,8 +117,11 @@ void Server::Start()
             // Socket is ready for writing
             if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
             {
-                itb->_client_hanlder.setConfig(this->_config);
-                itb->_client_hanlder.Driver(requested_data, bytesreceived);
+                if (itb->_client_hanlder.Driver(requested_data, bytesreceived) == 0)
+                {
+                    DropClient();
+                    continue;
+                }
             }
             itb++;
         }

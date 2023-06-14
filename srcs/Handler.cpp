@@ -58,7 +58,6 @@ void Handler::printRequstData()
 
 std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
 {
-	std::cout << "URI =>	" << uri << std::endl;
 	std::string MatchedUri;
 	if (uri.find(locationPath) != std::string::npos)
 	{
@@ -89,7 +88,10 @@ void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, st
 	header << "\r\n";
 
 	if (send(this->client_socket, header.str().c_str(), header.str().length(), 0) == -1)
+	{
 		perror("Error : Sending failed -> ");
+		// exit(0);
+	}
 }
 
 std::string Handler::generateListDir(std::string statusCode, std::string ls)
@@ -155,8 +157,6 @@ void Handler::sendErrorResponse(std::string statusCode)
 
 int Handler::parseRequestHeader(char *req, int bytesreceived)
 {
-	std::cout << "-> " << req << std::endl;
-	// 	exit(0);
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
@@ -357,7 +357,6 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	{
 		this->sendResponseHeader("200", "", "", 0);
 		rec = 0;
-		return 0;
 	}
 	return 1;
 }
@@ -423,7 +422,10 @@ int Handler::HandleGet()
 						if (this->headerflag == 0)
 							sendResponseHeader("200", ".html", "", lsDir.length());
 						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
+						{
 							perror("Error : Sending failed");
+							return (0);
+						}
 					}
 				}
 				else

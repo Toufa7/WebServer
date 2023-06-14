@@ -8,14 +8,16 @@ class Client
 {
     private:
        // int     _fd;
-        int     _socket;
+        int             _socket;
     public:
         // Constructor
+        ServerConfig    _cltconfig;
         Handler _client_hanlder;
         Client() {};
         Client(int socket)
         {
             _socket = socket;
+            // _cltconfig = cltconfig;
             //_fd = fildes;
             _client_hanlder.client_socket = socket;
             _client_hanlder._postFileFd = -1;
