@@ -67,11 +67,9 @@ class Server
         void    Init();
         void    Start();
         void    DropClient();
-        void    ReadAndSend();
         void    CreateServer();
         void    SelectSetsInit();
         int     AcceptAddClientToSet();
-        void    SendResponseHeader(int clt_skt);
 };
 
 #endif
