@@ -22,7 +22,7 @@ std::string CgiHeaderFindStatus(std::string Header)
         StatusCode = Header.substr(StatusPosition + 8, 3);
         StatusPosition = Header.find("Location: ");
         if (StatusPosition >= 0)
-            StatusLocation = Header.substr(StatusPosition + 10, Header.find("\r\n", StatusPosition + 10));
+            StatusLocation = Header.substr(StatusPosition + 10, (Header.find("\r\n", StatusPosition + 11) - (StatusPosition + 10)));
         StatusString = "HTTP/1.1 ";
         StatusString += StatusCode;
         StatusString += " ";
@@ -95,15 +95,19 @@ char **Handler::CgiSetEnv(std::string method)
 
 int Handler::HandleCgi(std::string path, std::string method, int header_flag)
 {
+    static int var = 0;
+    var++;
     int outFd, BodyPos;
     std::string Buf, TmpStr, Header, Body, tmpfilename;
     std::ifstream TmpOutFile;
     std::ofstream ParsedTmpOutFile;
-    std::stringstream Response;
+    std::stringstream TmpOutFileStream;
     struct stat s;
 
+    TmpOutFile.setf(std::ios::binary);
     if (stat(path.c_str(), &s) == 0 && (s.st_mode & S_IFREG))
     {
+        std::cout << "Var -> " << var << std::endl;
         if (header_flag == 0)
         {
             char **newEnv = CgiSetEnv(method); 
@@ -113,9 +117,9 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
             if (outFd < 0)
                 this->sendErrorResponse("500");
             //this may cause back and forth calling if you add return
-            this->_cgiTmpFilefd = outFd;
             this->_cgiTmpFileName = tmpfilename;
-
+            
+            //PHP Script child process
             char *excearr[] = {const_cast<char *>(this->_workingLocation.GetCgiInfo().path.c_str()), const_cast<char *>(path.c_str()), NULL};
             pid_t CID = fork();
             if (CID == 0)
@@ -125,41 +129,57 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
                 close(outFd);
                 execve(excearr[0], excearr, newEnv);
             }
+            wait(0);
             
+            //Free env
             for (unsigned int i = 0; newEnv[i] != NULL; i++)
                 delete newEnv[i];
             delete newEnv;
             
-            
-            waitpid(CID, 0, WNOHANG);
-            
+            //Parsing CGI header
             TmpOutFile.open(this->_cgiTmpFileName.c_str());
             if (!TmpOutFile)
                 std::cout << "The file could not be opened properly\n";
-            while ( TmpOutFile )
+            while (TmpOutFile)
             {
                 std::getline(TmpOutFile, TmpStr);
                 Buf += TmpStr += '\n';
             }
             TmpOutFile.close();
 
+            //Parse header
             Header = Buf.substr(0, Buf.find("\r\n\r\n"));
-            BodyPos = Buf.find("<!DOCTYPE html>");
-            if (BodyPos >= 0)
-            {
-                Body = Buf.substr(BodyPos, (Buf.length() - BodyPos));
-                Header += '\n';
-                Header.insert(0, CgiHeaderFindStatus(Header));
-                Header.insert(Header.length(), CgiBodySize(Body.length()));
+            TmpOutFileStream << CgiHeaderFindStatus(Header);
+            TmpOutFileStream << Header;
 
+            BodyPos = Buf.find("<!DOCTYPE html>");
+            if (BodyPos > 0)
+            {
+                Body = Buf.substr(BodyPos, (Buf.length() - BodyPos));        
+                TmpOutFileStream << CgiBodySize(Body.length());
             }
-            ParsedTmpOutFile.open(tmpfilename);
-            ParsedTmpOutFile << Header;
+
+            ParsedTmpOutFile.open(this->_cgiTmpFileName);
+            ParsedTmpOutFile << TmpOutFileStream.str();
+            ParsedTmpOutFile << "\r\n\r\n";
             if (BodyPos >= 0)
                 ParsedTmpOutFile << Body;
+            ParsedTmpOutFile.close();
+    
+            this->_cgiTmpFilefd = open(this->_cgiTmpFileName.c_str(), O_RDONLY , 0777);
+            bytesread = read(this->_cgiTmpFilefd, buffer, sizeof(buffer));
+            if (bytesread == -1)
+                perror("Error : Read <CGI>  -> ");
+            bytessent = send(this->client_socket, buffer, bytesread, 0);
+            if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
+            {
+                perror("Error (Send : CGI Header) -> ");
+                close(this->_cgiTmpFilefd);
+                remove(tmpfilename.c_str());
+                return (0);
+            }
         }
-
-        if (header_flag >= 0)
+        if (header_flag != 0)
         {
             bytesread = read(this->_cgiTmpFilefd, buffer, sizeof(buffer));
             if (bytesread == -1)

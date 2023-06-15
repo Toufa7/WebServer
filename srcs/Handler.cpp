@@ -90,7 +90,6 @@ void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, st
 	if (send(this->client_socket, header.str().c_str(), header.str().length(), 0) == -1)
 	{
 		perror("Error : Send <Response Header>  -> ");
-		// exit(0);
 	}
 }
 
@@ -435,10 +434,14 @@ int Handler::HandleGet()
 							perror("Error : Send <Index Of>	=>	");
 							return (0);
 						}
+						return (0);
 					}
 				}
 				else
+				{
 					this->sendErrorResponse("403"); // case of no index file and no index file:handled
+					return (0);
+				}
 			}
 		}
 		/*------------------------------------------- DIR Handler end ------------------------------------------------*/
@@ -452,13 +455,15 @@ int Handler::HandleGet()
 				if (this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type)
 				{
 					//check call to handle cgi
-					this->HandleCgi(_path, "GET", headerflag);
+					if (this->HandleCgi(_path, "GET", headerflag) == 0)
+						return (0);
 				}
 			}
 
 			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type)//condition that includes also not valid cgi extention
 			{
 				struct stat file;
+
 				if (this->headerflag == 0)
 				{
 					std::string filext = _path.substr(_path.find_last_of('.'), _path.length());
@@ -473,14 +478,20 @@ int Handler::HandleGet()
 				if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
 				{
 					perror("Error : Send <Regular File> => ");
+					close(requested_file);
 					return 0;
 				}
+				return (1);
 			}
 		}
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 	}
 	else
+	{
 		this->sendErrorResponse("404");
+		return (0);
+
+	}
 	return 1;
 }
 

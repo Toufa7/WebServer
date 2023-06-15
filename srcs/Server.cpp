@@ -35,17 +35,17 @@ void Server::DropClient()
     FD_CLR(active_clt, &readfds);
     FD_CLR(active_clt, &writefds);
     _clients.erase(itb++);
+    maxfds -= 1;
 }
 
 int Server::AcceptAddClientToSet()
 {
     int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
-    if (fcntl(newconnection, F_SETFL, O_NONBLOCK))
-        perror("Error: FCNTL Failed -> ");
-    if (newconnection == -1)
-        perror("Error: ACCEPT Failed -> ");
+    fcntl(newconnection, F_SETFL, O_NONBLOCK);
+    // if (newconnection == -1)
+    //     perror("Error: ACCEPT Failed -> ");
     _clients.push_back(Client(newconnection));
-    _clients.back()._client_hanlder.setConfig(this->_config);
+    _clients.back()._client_handler.setConfig(this->_config);
     readyforwrite = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
     FD_SET(_clients.back().GetCltSocket(), &writefds);
@@ -62,6 +62,7 @@ void Server::SelectSetsInit()
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
     FD_SET(server_socket, &readfds);
+    FD_SET(server_socket, &writefds);
     maxfds = server_socket;
 }
 
@@ -73,31 +74,43 @@ void Server::Start()
     bytesreceived = 0;
     while (TRUE)
     {
+        // signal(SIGPIPE, SIG_IGN);
+        std::cout << "Max fd-> " << maxfds << std::endl;
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
         /*
-            ! Waiting for an activity
+            ! Select keeps waiting for an activity once a return check I/O
         */
         activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, NULL);
         if (activity == -1)
            perror("Error: Select Failed -> ");
         /* 
-            ^ Catching an activity and Accepting the new conenction
+            ^ Catching an activity and Accepting the new conenction 
+            ^ Always true whenever a new connection came to the server
         */
-        // Always true whenever a new connection came to the server
         if (FD_ISSET(server_socket, &tmpfdsread))
         {
             client_socket = AcceptAddClientToSet();
         }
+        std::cout << "List Size -> " << _clients.size() << std::endl;
         for (itb = _clients.begin(); itb != _clients.end();)
         {
             active_clt = itb->GetCltSocket();
+            /* 
+                ? Socket is ready to read
+            */
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
-                if (bytesreceived < 1)
+                if (bytesreceived == 0)
                 {
-                    std::cerr << "Connection has ended" << std::endl;
+                    std::cerr << "Connection Closed by peer (No more data will be received)" << std::endl;
+                    DropClient();
+                    continue;
+                }
+                else if (bytesreceived < 0)
+                {
+                    perror("Error: Recv failed -> ");
                     DropClient();
                     continue;
                 }
@@ -107,12 +120,15 @@ void Server::Start()
                 }
             }
 
-            // Socket is ready for writing
+            /* 
+                ~ Socket is ready to write
+            */
             if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
             {
-                if (itb->_client_hanlder.Driver(requested_data, bytesreceived) == 0)
+                if (itb->_client_handler.Driver(requested_data, bytesreceived) == 0)
                 {
                     DropClient();
+                    continue;
                 }
             }
             itb++;

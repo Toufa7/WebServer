@@ -12,16 +12,16 @@ class Client
     public:
         // Constructor
         ServerConfig    _cltconfig;
-        Handler _client_hanlder;
+        Handler _client_handler;
         Client() {};
         Client(int socket)
         {
             _socket = socket;
             // _cltconfig = cltconfig;
             //_fd = fildes;
-            _client_hanlder.client_socket = socket;
-            _client_hanlder._postFileFd = -1;
-            _client_hanlder.headerflag = 0;
+            _client_handler.client_socket = socket;
+            _client_handler._postFileFd = -1;
+            _client_handler.headerflag = 0;
         }
         // int GetCltFd()
         // {

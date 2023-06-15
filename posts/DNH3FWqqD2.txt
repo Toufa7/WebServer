@@ -1,0 +1,7 @@
+==13392==WARNING: Can't write to symbolizer at fd 55
+
+==13392==WARNING: Can't write to symbolizer at fd 55
+
+==13392==WARNING: Can't write to symbolizer at fd 55
+
+==13392==WARNING: Can't write to symbolizer at fd 55
