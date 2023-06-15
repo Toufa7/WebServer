@@ -2,7 +2,14 @@
 
 //  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
 
-// TODO add drivder function
+Handler::Handler()
+{
+	this->_postFileFd = -1;
+    this->_headerflag = 0;
+	this->_chunkSize = 0;
+	this->_postRecv = 0;
+	this->_preChunk[9] = '\n';
+}
 
 //  ------------- ACCESSOR --------------------
 
@@ -29,7 +36,7 @@ int Handler::Driver(char *requested_data, int bytesreceived)
 {
 	// std::cerr << "--------> in Driver bytesreceived is: " << bytesreceived << std::endl;
 	int re = 1;
-	if (this->headerflag == 0)
+	if (this->_headerflag == 0)
 		re = this->parseRequestHeader(requested_data, bytesreceived);
 	else
 	{
@@ -40,7 +47,7 @@ int Handler::Driver(char *requested_data, int bytesreceived)
 		else if (this->_method == "DELETE")
 			re = this->HandleDelete();
 	}
-	this->headerflag++;
+	this->_headerflag++;
 	return re;
 }
 
@@ -116,7 +123,7 @@ std::string Handler::generateListDir(std::string statusCode, std::string ls)
 	return res;
 }
 
-void Handler::sendErrorResponse(std::string statusCode)
+void Handler::sendCodeResponse(std::string statusCode)
 {
 	std::string htmlContent;
 
@@ -180,6 +187,9 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 		value = current_line.substr(delimiter_position + 2, current_line.length()); // [delimiter_position + 2] to remove the extra space before value
 		this->_req_header[key] = value;												// storing key and value in map
 	}
+	// std::cout << header << std::endl;
+	// std::cout << "\n------------------------------\n\n";
+	// std::cout << body << std::endl;
 	// printRequstData();
 	// Validate request content
 	if (!this->validateRequest())
@@ -201,32 +211,32 @@ bool Handler::validateRequest()
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
 	{
-		this->sendErrorResponse("501");
+		this->sendCodeResponse("501");
 		return false;
 	}
 	if (this->_method == "POST" && this->_req_header.find("Transfer-Encoding") == this->_req_header.end() &&
 		this->_req_header.find("Content-Length") == this->_req_header.end())
 	{
-		this->sendErrorResponse("400");
+		this->sendCodeResponse("400");
 		return false;
 	}
 	// URI should start with a leading slash ("/") and not contain any illegal characters
 	if (!this->validateURI(this->_uri))
 	{
-		this->sendErrorResponse("400");
+		this->sendCodeResponse("400");
 		return false;
 	}
 	//  URI should not have more than 2048
 	if (this->_uri.length() > 2048)
 	{
-		this->sendErrorResponse("414");
+		this->sendCodeResponse("414");
 		return false;
 	}
 	//  Request body size should not be more than [client_body_size] from confing file
 	if (this->_req_header.find("Content-Length") != this->_req_header.end() &&
 		std::stoll(this->_req_header["Content-Length"]) > std::stoll(this->_config.GetClientBodySize()))
 	{
-		this->sendErrorResponse("413");
+		this->sendCodeResponse("413");
 		return false;
 	}
 	return this->matchLocation();
@@ -277,7 +287,7 @@ bool Handler::matchLocation()
 	std::vector<std::string> allowedMethods = this->_workingLocation.GetAllowedMethodsVec();
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
 	{
-		this->sendErrorResponse("405");
+		this->sendCodeResponse("405");
 		return false;
 	}
 
@@ -288,7 +298,7 @@ bool Handler::matchLocation()
 	// If location not found send a "not found" response
 	// if (i == serverLocations.size())
 	// {
-	// 	this->sendErrorResponse("404");
+	// 	this->sendCodeResponse("404");
 	// 	return false;
 	// }
 
@@ -313,10 +323,9 @@ bool Handler::validateURI(const std::string &uri)
 
 int Handler::HandlePost(char *body, int bytesreceived)
 {
-	static long long recv = 0;
-	recv += bytesreceived;
-	std::string encodingFormat, boundary;
-	std::string mimeType = "application/octet-stream"; // Default MIME type
+	this->_postRecv += bytesreceived;
+	std::string boundary;
+	std::string mimeType = ""; // Default MIME type
 	// Save MIME type and boundary if it exist
 	if (this->_req_header.find("Content-Type") != this->_req_header.end())
 	{
@@ -330,6 +339,19 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		else
 			mimeType = this->_req_header["Content-Type"];
 	}
+
+	// Create a file stream for writing
+	if (this->_headerflag == 0)
+	{
+		std::string fileName = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
+		this->_postFileFd = open(fileName.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0777);
+		if (this->_postFileFd < 0)
+		{
+			this->sendCodeResponse("500");
+			return 0;
+		}
+	}
+
 	if (!boundary.empty())
 	{
 		// TODO: boundry
@@ -338,30 +360,57 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	}
 	else if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
 	{
-		// TODO: chunked
-		std::cerr << "Post chunked\n";
-		return 0;
-	}
-	else if (boundary.empty() && encodingFormat.empty())
-	{
-		// Create a file stream for writing
-		if (this->headerflag == 0)
+		for (int i = 0; i < bytesreceived; i++)
 		{
-			std::string fileName = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
-			this->_postFileFd = open(fileName.c_str(), O_CREAT | O_WRONLY | O_APPEND , 0777);
-			if (this->_postFileFd < 0)
+			if (this->_chunkSize == 0)
 			{
-				this->sendErrorResponse("500");
-				return 0;
+				std::string tmp;
+				while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+					i++;
+
+				if (i == 0)
+				{
+					int j = 9;
+					for (; j >= 0; j--)
+						if (this->_preChunk[j] == '\n')
+							break;
+					j++;
+					for (; j < 10 && this->_preChunk[j] != '\r'; j++)
+						tmp.push_back(this->_preChunk[j]);
+				}
+				for (; i < bytesreceived && body[i] != '\r'; i++)
+					tmp.push_back(body[i]);
+
+				if (tmp.empty() || tmp == "0")
+				{
+					this->sendCodeResponse("201");
+					close(this->_postFileFd);
+					return 0;
+				}
+				else
+				{
+					std::stringstream ss;
+					ss << std::hex << tmp;
+					ss >> this->_chunkSize;
+					i++;
+					continue;
+				}
 			}
+			write(this->_postFileFd, &body[i], 1);
+			this->_chunkSize--;
 		}
+		for (int i = 0; i < 10; i++)
+			this->_preChunk[i] = body[bytesreceived - 10 + i];
+	}
+	else
+	{
 		// Write the request body data to the file
 		write(this->_postFileFd, body, bytesreceived);
 
-		// std::cerr << "total rec in post " << rec << std::endl;
-		if (recv >= std::stoll(this->_req_header["Content-Length"]))
+		// std::cout << bytesreceived << " " << this->_postRecv << std::endl;
+		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
 		{
-			this->sendResponseHeader("201", "", "", 0);
+			this->sendCodeResponse("201");
 			close(this->_postFileFd);
 			return 0;
 		}
@@ -422,7 +471,7 @@ int Handler::HandleGet()
 					if (DirStr.empty() == 0)
 					{
 						std::string lsDir = generateListDir("200", DirStr);
-						if (this->headerflag == 0)
+						if (this->_headerflag == 0)
 							sendResponseHeader("200", ".html", "", lsDir.length());
 						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
 						{
@@ -432,7 +481,7 @@ int Handler::HandleGet()
 					}
 				}
 				else
-					this->sendErrorResponse("403"); //case of no autoindex and no index file
+					this->sendCodeResponse("403"); // case of no index file and no index file:handled
 			}
 		}
 		/*------------------------------------------- DIR Handler end ------------------------------------------------*/
@@ -490,10 +539,10 @@ int Handler::HandleGet()
 
 void Handler::DeleteDirectory(const char *path)
 {
-	DIR				*directory;
-	struct dirent	*entry;
-	struct stat		file;
-	char 			subdir[256];
+	DIR *directory;
+	struct dirent *entry;
+	struct stat file;
+	char subdir[256];
 
 	// open a directory
 	if ((directory = opendir(path)) == NULL)
@@ -585,20 +634,20 @@ int Handler::HandleDelete()
 					// Run CGI
 					// else
 					// {
-					// 	sendErrorResponse("403");
+					// 	sendCodeResponse("403");
 					// }
 				}
 			}
 			else
 			{
-				sendErrorResponse("409");
+				sendCodeResponse("409");
 			}
 		}
 	}
 	else
 	{
 		std::cerr << "File or Directory doesn't exist :(" << std::endl;
-		sendErrorResponse("404");
+		sendCodeResponse("404");
 		return 0;
 	}
 	return 0;
