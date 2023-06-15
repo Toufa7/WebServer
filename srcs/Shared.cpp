@@ -203,5 +203,5 @@ std::string Shared::fileExtention(std::string fileName)
 		return (extention);
 	}
 	else
-		return ("n/a");
+		return ("");
 }
