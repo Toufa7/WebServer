@@ -2,7 +2,14 @@
 
 //  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
 
-// TODO add drivder function
+Handler::Handler()
+{
+	this->_postFileFd = -1;
+    this->_headerflag = 0;
+	this->_chunkSize = 0;
+	this->_postRecv = 0;
+	this->_preChunk[9] = '\n';
+}
 
 //  ------------- ACCESSOR --------------------
 
@@ -29,7 +36,7 @@ int Handler::Driver(char *requested_data, int bytesreceived)
 {
 	// std::cerr << "--------> in Driver bytesreceived is: " << bytesreceived << std::endl;
 	int re = 1;
-	if (this->headerflag == 0)
+	if (this->_headerflag == 0)
 		re = this->parseRequestHeader(requested_data, bytesreceived);
 	else
 	{
@@ -40,7 +47,7 @@ int Handler::Driver(char *requested_data, int bytesreceived)
 		else if (this->_method == "DELETE")
 			re = this->HandleDelete();
 	}
-	this->headerflag++;
+	this->_headerflag++;
 	return re;
 }
 
@@ -179,6 +186,9 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 		value = current_line.substr(delimiter_position + 2, current_line.length()); // [delimiter_position + 2] to remove the extra space before value
 		this->_req_header[key] = value;												// storing key and value in map
 	}
+	// std::cout << header << std::endl;
+	// std::cout << "\n------------------------------\n\n";
+	// std::cout << body << std::endl;
 	// printRequstData();
 	// Validate request content
 	if (!this->validateRequest())
@@ -312,10 +322,9 @@ bool Handler::validateURI(const std::string &uri)
 
 int Handler::HandlePost(char *body, int bytesreceived)
 {
-	static long long recv = 0;
-	recv += bytesreceived;
-	std::string encodingFormat, boundary;
-	std::string mimeType = "application/octet-stream"; // Default MIME type
+	this->_postRecv += bytesreceived;
+	std::string boundary;
+	std::string mimeType = ""; // Default MIME type
 	// Save MIME type and boundary if it exist
 	if (this->_req_header.find("Content-Type") != this->_req_header.end())
 	{
@@ -329,6 +338,19 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		else
 			mimeType = this->_req_header["Content-Type"];
 	}
+
+	// Create a file stream for writing
+	if (this->_headerflag == 0)
+	{
+		std::string fileName = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
+		this->_postFileFd = open(fileName.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0777);
+		if (this->_postFileFd < 0)
+		{
+			this->sendErrorResponse("500");
+			return 0;
+		}
+	}
+
 	if (!boundary.empty())
 	{
 		// TODO: boundry
@@ -337,28 +359,55 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	}
 	else if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
 	{
-		// TODO: chunked
-		std::cerr << "Post chunked\n";
-		return 0;
-	}
-	else if (boundary.empty() && encodingFormat.empty())
-	{
-		// Create a file stream for writing
-		if (this->headerflag == 0)
+		for (int i = 0; i < bytesreceived; i++)
 		{
-			std::string fileName = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
-			this->_postFileFd = open(fileName.c_str(), O_CREAT | O_WRONLY | O_APPEND , 0777);
-			if (this->_postFileFd < 0)
+			if (this->_chunkSize == 0)
 			{
-				this->sendErrorResponse("500");
-				return 0;
+				std::string tmp;
+				while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+					i++;
+
+				if (i == 0)
+				{
+					int j = 9;
+					for (; j >= 0; j--)
+						if (this->_preChunk[j] == '\n')
+							break;
+					j++;
+					for (; j < 10 && this->_preChunk[j] != '\r'; j++)
+						tmp.push_back(this->_preChunk[j]);
+				}
+				for (; i < bytesreceived && body[i] != '\r'; i++)
+					tmp.push_back(body[i]);
+
+				if (tmp.empty() || tmp == "0")
+				{
+					this->sendResponseHeader("201", "", "", 0);
+					close(this->_postFileFd);
+					return 0;
+				}
+				else
+				{
+					std::stringstream ss;
+					ss << std::hex << tmp;
+					ss >> this->_chunkSize;
+					i++;
+					continue;
+				}
 			}
+			write(this->_postFileFd, &body[i], 1);
+			this->_chunkSize--;
 		}
+		for (int i = 0; i < 10; i++)
+			this->_preChunk[i] = body[bytesreceived - 10 + i];
+	}
+	else
+	{
 		// Write the request body data to the file
 		write(this->_postFileFd, body, bytesreceived);
 
-		// std::cerr << "total rec in post " << rec << std::endl;
-		if (recv >= std::stoll(this->_req_header["Content-Length"]))
+		std::cout << bytesreceived << " " << this->_postRecv << std::endl;
+		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
 		{
 			this->sendResponseHeader("201", "", "", 0);
 			close(this->_postFileFd);
@@ -426,7 +475,7 @@ int Handler::HandleGet()
 					if (DirStr.empty() == 0)
 					{
 						std::string lsDir = generateListDir("200", DirStr);
-						if (this->headerflag == 0)
+						if (this->_headerflag == 0)
 							sendResponseHeader("200", ".html", "", lsDir.length());
 						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
 						{
@@ -449,15 +498,15 @@ int Handler::HandleGet()
 				// handle file cgi
 				if (this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type)
 				{
-					//check call to handle cgi
-					this->HandleCgi(_path, "GET", headerflag);
+					// check call to handle cgi
+					this->HandleCgi(_path, "GET", this->_headerflag);
 				}
 			}
 
-			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type)//condition that includes also not valid cgi extention
+			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type) // condition that includes also not valid cgi extention
 			{
 				struct stat file;
-				if (this->headerflag == 0)
+				if (this->_headerflag == 0)
 				{
 					std::string filext = _path.substr(_path.find_last_of('.'), _path.length());
 					requested_file = open(this->_path.c_str(), O_RDONLY);
@@ -488,10 +537,10 @@ int Handler::HandleGet()
 
 void Handler::DeleteDirectory(const char *path)
 {
-	DIR				*directory;
-	struct dirent	*entry;
-	struct stat		file;
-	char 			subdir[256];
+	DIR *directory;
+	struct dirent *entry;
+	struct stat file;
+	char subdir[256];
 
 	// open a directory
 	if ((directory = opendir(path)) == NULL)

@@ -44,7 +44,7 @@ int Server::AcceptAddClientToSet()
     if (newconnection == -1)
         perror("Error: ACCEPT Failed -> ");
     _clients.push_back(Client(newconnection));
-    _clients.back()._client_hanlder.setConfig(this->_config);
+    _clients.back()._client_handler.setConfig(this->_config);
     readyforwrite = false;
     FD_SET(_clients.back().GetCltSocket(), &readfds);
     FD_SET(_clients.back().GetCltSocket(), &writefds);
@@ -117,7 +117,7 @@ void Server::Start()
             // Socket is ready for writing
             if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
             {
-                if (itb->_client_hanlder.Driver(requested_data, bytesreceived) == 0)
+                if (itb->_client_handler.Driver(requested_data, bytesreceived) == 0)
                 {
                     DropClient();
                     continue;
