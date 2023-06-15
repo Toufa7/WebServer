@@ -163,11 +163,11 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
         {
             bytesread = read(this->_cgiTmpFilefd, buffer, sizeof(buffer));
             if (bytesread == -1)
-                perror("Error (Read) -> ");
+                perror("Error : Read <CGI>  -> ");
             bytessent = send(this->client_socket, buffer, bytesread, 0);
             if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
             {
-                perror("Error (Send) -> ");
+                perror("Error : Send <CGI>  =>  ");
                 close(this->_cgiTmpFilefd);
                 remove(tmpfilename.c_str());
                 return (0);

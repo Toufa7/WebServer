@@ -13,7 +13,6 @@
 
 int main(int ac, char **av)
 {
-    signal(SIGPIPE, SIG_IGN);
     GlobalConfig        configuration;
     std::vector<Server> servers;
     char conf[15] = "conf/file.conf";

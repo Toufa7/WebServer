@@ -23,6 +23,7 @@
 
 #define BACKLOG     10              // Max allowed connections can be queued up
 #define TRUE        1
+#define FAILURE        0
 #define CHUNK_SIZE  1024
 
 // Setuping and startig the server : Creating socket -> binding -> listening (Handling multiple clients)

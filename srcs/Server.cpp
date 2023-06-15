@@ -40,7 +40,8 @@ void Server::DropClient()
 int Server::AcceptAddClientToSet()
 {
     int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
-    fcntl(newconnection, F_SETFL, O_NONBLOCK);
+    if (fcntl(newconnection, F_SETFL, O_NONBLOCK))
+        perror("Error: FCNTL Failed -> ");
     if (newconnection == -1)
         perror("Error: ACCEPT Failed -> ");
     _clients.push_back(Client(newconnection));
@@ -83,7 +84,7 @@ void Server::Start()
         /* 
             ^ Catching an activity and Accepting the new conenction
         */
-        // Always true
+        // Always true whenever a new connection came to the server
         if (FD_ISSET(server_socket, &tmpfdsread))
         {
             client_socket = AcceptAddClientToSet();
@@ -91,11 +92,6 @@ void Server::Start()
         for (itb = _clients.begin(); itb != _clients.end();)
         {
             active_clt = itb->GetCltSocket();
-            // Socket is ready for reading
-            // std::cout << "Read  " << FD_ISSET(active_clt, &tmpfdsread) << "\n";
-            // std::cout << "Write " << FD_ISSET(active_clt, &tmpfdswrite) << "\n";
-
-
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);

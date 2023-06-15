@@ -89,7 +89,7 @@ void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, st
 
 	if (send(this->client_socket, header.str().c_str(), header.str().length(), 0) == -1)
 	{
-		perror("Error : Sending failed -> ");
+		perror("Error : Send <Response Header>  -> ");
 		// exit(0);
 	}
 }
@@ -151,7 +151,7 @@ void Handler::sendErrorResponse(std::string statusCode)
 	sendResponseHeader(statusCode, ".html", "", htmlContent.length());
 	if (send(this->client_socket, htmlContent.c_str(), htmlContent.length(), 0) == -1)
 	{
-		perror("Error : Sending Response failed -> ");
+		perror("Error : Send <Error Response> ");
 	}
 }
 
@@ -432,7 +432,7 @@ int Handler::HandleGet()
 							sendResponseHeader("200", ".html", "", lsDir.length());
 						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
 						{
-							perror("Error : Sending (LstDir) failed");
+							perror("Error : Send <Index Of>	=>	");
 							return (0);
 						}
 					}
@@ -467,14 +467,12 @@ int Handler::HandleGet()
 					sendResponseHeader("200", filext, "", file.st_size);
 				}
 				bytesread = read(requested_file, buffer, sizeof(buffer));
-				// std::cout << "Read -> "<< bytesread << std::endl;
 				if (bytesread == -1)
-					perror("Error (Read) -> ");
+					perror("Error : Read <Regular File> => ");
 				bytessent = send(this->client_socket, buffer, bytesread, 0);
-				// std::cout << "Send -> "<< bytessent << std::endl;
 				if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
 				{
-					perror("Error (Send) -> ");
+					perror("Error : Send <Regular File> => ");
 					return 0;
 				}
 			}
