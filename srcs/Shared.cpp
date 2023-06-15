@@ -108,7 +108,7 @@ Shared::Shared()
 	this->mime_types[".otf"]	= "application/x-font-opentype";
 	this->mime_types[".eot"]	= "application/vnd.ms-fontobject";
 	this->mime_types[".bin"]	= "application/octet-stream";
-	this->mime_types[""]	= "";
+	this->mime_types[".php"]	= "application/x-httpd-php";
 
 	// Status codes
 	this->status_codes["100"] = "Continue";

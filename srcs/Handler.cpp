@@ -79,6 +79,7 @@ std::string Handler::GetRootLocation(std::string uri, std::string locationPath, 
 // Generate a response header from the recieved argements
 void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
 {
+	// 
 	std::stringstream header;
 
 	header << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
@@ -205,6 +206,7 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 
 // Check for Possible error in the Request
 bool Handler::validateRequest()
+	// if both Transfer-Encoding and Content-Length not provided
 {
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
@@ -212,7 +214,6 @@ bool Handler::validateRequest()
 		this->sendCodeResponse("501");
 		return false;
 	}
-	// if both Transfer-Encoding and Content-Length not provided
 	if (this->_method == "POST" && this->_req_header.find("Transfer-Encoding") == this->_req_header.end() &&
 		this->_req_header.find("Content-Length") == this->_req_header.end())
 	{
@@ -423,13 +424,11 @@ int Handler::HandlePost(char *body, int bytesreceived)
 int Handler::HandleGet()
 {
 	// TODO: Function to match the location, takes locationsVec, and uri , and should return the closest match
-	// int RepStrPos;
-	size_t i = 0;
+	int indexfileflag = 0;
 	std::string RealPath, tmp_str, DirStr, UriInit;
-	struct stat s, t;
+	struct stat s;
 
 	UriInit = _uri;
-
 	if (stat(_path.c_str(), &s) == 0)
 	{
 		/*------------------------------------------- DIR Handler ----------------------------------------------------*/
@@ -437,24 +436,21 @@ int Handler::HandleGet()
 		{
 			if (_path[_path.size() - 1] != '/')
 				_path += '/';
-			if (this->_workingLocation.GetIndexesVec().empty() == 0) // identify the working index
+			
+			if (this->_workingLocation.GetIndexesVec().empty() == 0)
 			{
-				for (i = 0; i < this->_workingLocation.GetIndexesVec().size(); i++)
-				{
-					tmp_str = _path;
-					tmp_str += this->_workingLocation.GetIndexesVec()[i];
-					if (stat(tmp_str.c_str(), &t) == 0)
-						break;
-					tmp_str.erase();
-				}
-			}
-			if (tmp_str.empty() == 0)
-			{
-				// case of valid index file so you shuold handle cgi or not
+				std::cout << "Is indexes vec empty ->>" << this->_workingLocation.GetIndexesVec().empty() << "<<-\n";
+				//case of valid index file so you shuold handle cgi or not
+				std::string indexfilepath;
+
+				indexfilepath = _path;
+				indexfilepath += this->_workingLocation.GetIndexesVec()[0];
+				this->_path = indexfilepath;
+				indexfileflag = 1;
 			}
 			else
 			{
-				// case of no index file and should check autoindex
+				//case of no index file and should check autoindex
 				if (this->_workingLocation.GetAutoIndex() == 1)
 				{
 					DIR *DirPtr;
@@ -492,47 +488,52 @@ int Handler::HandleGet()
 		/*------------------------------------------- DIR Handler end ------------------------------------------------*/
 
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
-		else if (s.st_mode & S_IFREG)
+		if ((s.st_mode & S_IFREG) || (indexfileflag == 1))
 		{
 			if (this->_workingLocation.GetCgiInfo().path != "n/a")
 			{
 				// handle file cgi
-				if (this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type)
+				std::cout << "index file cgi\n";
+				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type))
 				{
-					//check call to handle cgi
-					if (this->HandleCgi(_path, "GET", this->_headerflag) == 0)
+					if (this->HandleCgi(_path, "GET", headerflag) == 0)
 						return (0);
 				}
 			}
-
-			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type) // condition that includes also not valid cgi extention
+			if (this->_workingLocation.GetCgiInfo().path == "n/a" 
+				|| this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type
+				|| (indexfileflag == 1))//condition that includes also non valid cgi extension
 			{
 				struct stat file;
-				if (this->_headerflag == 0)
+				
+				if (this->headerflag == 0)
 				{
 					std::string filext = _path.substr(_path.find_last_of('.'), _path.length());
+					std::cout << "file extention is ->" << filext << "\n";
+
 					requested_file = open(this->_path.c_str(), O_RDONLY);
 					stat(this->_path.c_str(), &file);
 					sendResponseHeader("200", filext, "", file.st_size);
 				}
 				bytesread = read(requested_file, buffer, sizeof(buffer));
-				// std::cout << "Read -> "<< bytesread << std::endl;
 				if (bytesread == -1)
 					perror("Error (Read) -> ");
 				bytessent = send(this->client_socket, buffer, bytesread, 0);
-				// std::cout << "Send -> "<< bytessent << std::endl;
 				if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
 				{
+					indexfileflag = 0;
 					perror("Error (Send) -> ");
-					return 0;
+					//This added
+					close(requested_file);
+					return (0);
 				}
 			}
 		}
-		/*--------------------------------------------- File Handler -------------------------------------------------*/
+		/*--------------------------------------------- File Handler end -------------------------------------------------*/
 	}
 	else
-		this->sendCodeResponse("404");
-	return 1;
+		this->sendErrorResponse("404");
+	return (1);
 }
 
 // -------------------------------- Delete method ----------------------
