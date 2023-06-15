@@ -122,7 +122,7 @@ std::string Handler::generateListDir(std::string statusCode, std::string ls)
 	return res;
 }
 
-void Handler::sendErrorResponse(std::string statusCode)
+void Handler::sendCodeResponse(std::string statusCode)
 {
 	std::string htmlContent;
 
@@ -209,33 +209,33 @@ bool Handler::validateRequest()
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
 	{
-		this->sendErrorResponse("501");
+		this->sendCodeResponse("501");
 		return false;
 	}
 	// if both Transfer-Encoding and Content-Length not provided
 	if (this->_method == "POST" && this->_req_header.find("Transfer-Encoding") == this->_req_header.end() &&
 		this->_req_header.find("Content-Length") == this->_req_header.end())
 	{
-		this->sendErrorResponse("400");
+		this->sendCodeResponse("400");
 		return false;
 	}
 	// URI should start with a leading slash ("/") and not contain any illegal characters
 	if (!this->validateURI(this->_uri))
 	{
-		this->sendErrorResponse("400");
+		this->sendCodeResponse("400");
 		return false;
 	}
 	//  URI should not have more than 2048
 	if (this->_uri.length() > 2048)
 	{
-		this->sendErrorResponse("414");
+		this->sendCodeResponse("414");
 		return false;
 	}
 	//  Request body size should not be more than [client_body_size] from confing file
 	if (this->_req_header.find("Content-Length") != this->_req_header.end() &&
 		std::stoll(this->_req_header["Content-Length"]) > std::stoll(this->_config.GetClientBodySize()))
 	{
-		this->sendErrorResponse("413");
+		this->sendCodeResponse("413");
 		return false;
 	}
 	return this->matchLocation();
@@ -286,7 +286,7 @@ bool Handler::matchLocation()
 	std::vector<std::string> allowedMethods = this->_workingLocation.GetAllowedMethodsVec();
 	if (std::find(allowedMethods.begin(), allowedMethods.end(), this->_method) == allowedMethods.end())
 	{
-		this->sendErrorResponse("405");
+		this->sendCodeResponse("405");
 		return false;
 	}
 
@@ -297,7 +297,7 @@ bool Handler::matchLocation()
 	// If location not found send a "not found" response
 	// if (i == serverLocations.size())
 	// {
-	// 	this->sendErrorResponse("404");
+	// 	this->sendCodeResponse("404");
 	// 	return false;
 	// }
 
@@ -346,7 +346,7 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		this->_postFileFd = open(fileName.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0777);
 		if (this->_postFileFd < 0)
 		{
-			this->sendErrorResponse("500");
+			this->sendCodeResponse("500");
 			return 0;
 		}
 	}
@@ -382,7 +382,7 @@ int Handler::HandlePost(char *body, int bytesreceived)
 
 				if (tmp.empty() || tmp == "0")
 				{
-					this->sendResponseHeader("201", "", "", 0);
+					this->sendCodeResponse("201");
 					close(this->_postFileFd);
 					return 0;
 				}
@@ -406,10 +406,10 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		// Write the request body data to the file
 		write(this->_postFileFd, body, bytesreceived);
 
-		std::cout << bytesreceived << " " << this->_postRecv << std::endl;
+		// std::cout << bytesreceived << " " << this->_postRecv << std::endl;
 		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
 		{
-			this->sendResponseHeader("201", "", "", 0);
+			this->sendCodeResponse("201");
 			close(this->_postFileFd);
 			return 0;
 		}
@@ -485,7 +485,7 @@ int Handler::HandleGet()
 					}
 				}
 				else
-					this->sendErrorResponse("403"); // case of no index file and no index file:handled
+					this->sendCodeResponse("403"); // case of no index file and no index file:handled
 			}
 		}
 		/*------------------------------------------- DIR Handler end ------------------------------------------------*/
@@ -530,7 +530,7 @@ int Handler::HandleGet()
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 	}
 	else
-		this->sendErrorResponse("404");
+		this->sendCodeResponse("404");
 	return 1;
 }
 
@@ -633,20 +633,20 @@ int Handler::HandleDelete()
 					// Run CGI
 					// else
 					// {
-					// 	sendErrorResponse("403");
+					// 	sendCodeResponse("403");
 					// }
 				}
 			}
 			else
 			{
-				sendErrorResponse("409");
+				sendCodeResponse("409");
 			}
 		}
 	}
 	else
 	{
 		std::cerr << "File or Directory doesn't exist :(" << std::endl;
-		sendErrorResponse("404");
+		sendCodeResponse("404");
 		return 0;
 	}
 	return 0;
