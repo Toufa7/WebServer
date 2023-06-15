@@ -6,6 +6,7 @@
 #include <string>
 #include <sstream>
 #include <iterator>
+#include <sys/stat.h>
 #include "Shared.hpp"
 
 struct cgi
