@@ -403,9 +403,6 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	}
 	else
 	{
-		// Write the request body data to the file
-		write(this->_postFileFd, body, bytesreceived);
-
 		// std::cout << bytesreceived << " " << this->_postRecv << std::endl;
 		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
 		{
@@ -413,6 +410,10 @@ int Handler::HandlePost(char *body, int bytesreceived)
 			close(this->_postFileFd);
 			return 0;
 		}
+
+		// Write the request body data to the file
+		write(this->_postFileFd, body, min(bytesreceived, std::stoll(this->_req_header["Content-Length"] - this->_postRecv)));
+
 	}
 	return 1;
 }
