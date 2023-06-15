@@ -433,7 +433,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
                 indexFilePath = location_tmp._Root += '/';
                 indexFilePath += location.substr((key_pos + 8), value_pos - (key_pos + 9));
                 if ((stat(indexFilePath.c_str(), &indexFileStat) == 0) && (indexFileStat.st_mode & S_IFREG))
-                    location_tmp._IndexesVec.push_back(location.substr((key_pos + 8), value_pos - (key_pos + 8)));
+                    location_tmp._IndexesVec.push_back(location.substr((key_pos + 8), value_pos - (key_pos + 9)));
             }
             else
                 break;
