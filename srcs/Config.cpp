@@ -392,7 +392,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
         location_tmp._CgiInfo.type = tmp_str.substr(0, npos);
         npos = tmp_str.find(" ");
         if (npos < 0)
-            InvalidConfigFile("Invalid config file : There was an error.");
+            InvalidConfigFile("Invalid config file : There was an error (Find CGI).");
         location_tmp._CgiInfo.path = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
         tmp_str.erase();
     }
@@ -420,6 +420,9 @@ void    ServerConfig::ParseServerLocation(std::string location)
     key_pos = location.find("indexes ");
     if (key_pos > 0)
     {
+        struct stat indexFileStat;
+        std::string indexFilePath;
+
         while (1)
         {
             if (key_pos >= 0)
@@ -427,7 +430,10 @@ void    ServerConfig::ParseServerLocation(std::string location)
                 value_pos = location.find("\n", key_pos + 1);
                 if (value_pos < 0)
                     InvalidConfigFile("Invalid config file : There was an error (Find Index).");
-                location_tmp._IndexesVec.push_back(location.substr((key_pos + 8), value_pos - (key_pos + 8)));
+                indexFilePath = location_tmp._Root += '/';
+                indexFilePath += location.substr((key_pos + 8), value_pos - (key_pos + 9));
+                if ((stat(indexFilePath.c_str(), &indexFileStat) == 0) && (indexFileStat.st_mode & S_IFREG))
+                    location_tmp._IndexesVec.push_back(location.substr((key_pos + 8), value_pos - (key_pos + 8)));
             }
             else
                 break;
