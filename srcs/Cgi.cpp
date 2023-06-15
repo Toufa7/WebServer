@@ -115,7 +115,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
             tmpfilename = this->_shared.generateFileName("tmpfiles/", ".tmp");
             outFd = open(tmpfilename.c_str(), O_CREAT | O_RDWR | O_TRUNC , 0777);
             if (outFd < 0)
-                this->sendErrorResponse("500");
+                this->sendCodeResponse("500");
             //this may cause back and forth calling if you add return
             this->_cgiTmpFileName = tmpfilename;
             
@@ -195,7 +195,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
         }
     }
     else
-        this->sendErrorResponse("404");
+        this->sendCodeResponse("404");
     return (1);
 }
 

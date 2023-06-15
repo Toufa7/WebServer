@@ -17,23 +17,20 @@
 
 #define CHUNK_SIZE 1024
 
-
 class Handler
 {
 public:
+	Handler();
 	std::string GetRootLocation(std::string uri, std::string locationPath, std::string root);
 	int Driver(char *requested_data, int bytesreceived);
 
-
-	std::string	getRequestMethod();
-	std::string	getRequestURI();
-	void		setConfig(ServerConfig &config);
-	int			headerflag;
-	int			client_socket;
-	int			_postFileFd;
-    int			_cgiTmpFilefd;
-	std::string	_cgiTmpFileName;
-	std::map<std::string, std::string>	_req_header;
+	std::string getRequestMethod();
+	std::string getRequestURI();
+	void setConfig(ServerConfig &config);
+	int client_socket;
+	int _cgiTmpFilefd;
+	std::string _cgiTmpFileName;
+	std::map<std::string, std::string> _req_header;
 
 private:
 	std::string _method;
@@ -46,6 +43,10 @@ private:
 	int requested_file;
 	char buffer[CHUNK_SIZE];
 	int bytesread, bytessent;
+	int _postRecv, _chunkSize;
+	char _preChunk[10];
+	int _postFileFd;
+	int _headerflag;
 
 	int parseRequestHeader(char *req, int bytesreceived);
 	int HandlePost(char *body, int bytesreceived);
@@ -58,7 +59,7 @@ private:
 	bool validateURI(const std::string &uri);
 	void printRequstData();
 	void sendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength);
-	void sendErrorResponse(std::string statusCode);
+	void sendCodeResponse(std::string statusCode);
 	std::string generateListDir(std::string statusCode, std::string ls);
 	void DeleteFile(const char *path);
 	void DeleteDirectory(const char *path);
