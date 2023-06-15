@@ -498,8 +498,9 @@ int Handler::HandleGet()
 				// handle file cgi
 				if (this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type)
 				{
-					// check call to handle cgi
-					this->HandleCgi(_path, "GET", this->_headerflag);
+					//check call to handle cgi
+					if (this->HandleCgi(_path, "GET", this->_headerflag) == 0)
+						return (0);
 				}
 			}
 
