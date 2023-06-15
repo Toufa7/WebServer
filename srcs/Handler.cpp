@@ -486,7 +486,6 @@ int Handler::HandleGet()
 			
 			if (this->_workingLocation.GetIndexesVec().empty() == 0)
 			{
-				std::cout << "Is indexes vec empty ->>" << this->_workingLocation.GetIndexesVec().empty() << "<<-\n";
 				//case of valid index file so you shuold handle cgi or not
 				std::string indexfilepath;
 
@@ -543,20 +542,19 @@ int Handler::HandleGet()
 				std::cout << "index file cgi\n";
 				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type))
 				{
-					if (this->HandleCgi(_path, "GET", this->_headerflag) == 0)
+					if (this->HandleCgi(_path, "GET", _headerflag) == 0)
 						return (0);
 				}
 			}
 			if (this->_workingLocation.GetCgiInfo().path == "n/a" 
 				|| this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type
-				|| (indexfileflag == 1))//condition that includes also non valid cgi extension
+				|| (indexfileflag == 1))//regular file, non valid cgi extension and index file present with cgi off
 			{
 				struct stat file;
 				
 				if (this->_headerflag == 0)
 				{
-					std::string filext = _path.substr(_path.find_last_of('.'), _path.length());
-					std::cout << "file extention is ->" << filext << "\n";
+					std::string filext = this->_shared.fileExtention(_path);
 
 					requested_file = open(this->_path.c_str(), O_RDONLY);
 					stat(this->_path.c_str(), &file);
@@ -570,7 +568,6 @@ int Handler::HandleGet()
 				{
 					indexfileflag = 0;
 					perror("Error (Send) -> ");
-					//This added
 					close(requested_file);
 					return (0);
 				}

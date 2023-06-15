@@ -15,7 +15,7 @@ int main(int ac, char **av)
 {
     GlobalConfig        configuration;
     std::vector<Server> servers;
-    char conf[15] = "conf/file.conf";
+    char conf[17] = "conf/config.conf";
 
     if (ac == 2)
         configuration.ParseConfigFile(av[1]);
