@@ -23,10 +23,10 @@ int main(int ac, char **av)
         configuration.ParseConfigFile(conf);
     for (size_t i = 0; i < configuration.GetServersVector().size(); i++)
     {
-        
         Server          WebServer(configuration.GetServersVector()[i]);
         WebServer.Start();
         servers.push_back(WebServer);
     }
+
     return (0);
 }

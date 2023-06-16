@@ -42,8 +42,8 @@ int Server::AcceptAddClientToSet()
 {
     int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
     fcntl(newconnection, F_SETFL, O_NONBLOCK);
-    // if (newconnection == -1)
-    //     perror("Error: ACCEPT Failed -> ");
+    if (newconnection == -1)
+        perror("Error: ACCEPT Failed -> ");
     _clients.push_back(Client(newconnection));
     _clients.back()._client_handler.setConfig(this->_config);
     readyforwrite = false;
@@ -56,8 +56,8 @@ int Server::AcceptAddClientToSet()
 
 void Server::SelectSetsInit()
 {
-    // timeout.tv_sec  = 100;
-    // timeout.tv_usec = 100;
+    timeout.tv_sec  = 100;
+    timeout.tv_usec = 100;
     
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
@@ -75,13 +75,13 @@ void Server::Start()
     while (TRUE)
     {
         // signal(SIGPIPE, SIG_IGN);
-        std::cout << "Max fd-> " << maxfds << std::endl;
+        // std::cout << "Max fd-> " << maxfds << std::endl;
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
         /*
             ! Select keeps waiting for an activity once a return check I/O
         */
-        activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, NULL);
+        activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
         if (activity == -1)
            perror("Error: Select Failed -> ");
         /* 
@@ -92,7 +92,7 @@ void Server::Start()
         {
             client_socket = AcceptAddClientToSet();
         }
-        std::cout << "List Size -> " << _clients.size() << std::endl;
+        // std::cout << "List Size -> " << _clients.size() << std::endl;
         for (itb = _clients.begin(); itb != _clients.end();)
         {
             active_clt = itb->GetCltSocket();
@@ -119,12 +119,12 @@ void Server::Start()
                     readyforwrite = true;
                 }
             }
-
             /* 
                 ~ Socket is ready to write
             */
             if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
             {
+                // Connection Keep-Alive 
                 if (itb->_client_handler.Driver(requested_data, bytesreceived) == 0)
                 {
                     DropClient();
