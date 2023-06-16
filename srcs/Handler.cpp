@@ -5,7 +5,7 @@
 Handler::Handler()
 {
 	this->_postFileFd = -1;
-    this->_headerflag = 0;
+	this->_headerflag = 0;
 	this->_chunkSize = 0;
 	this->_postRecv = 0;
 	this->_chunkHexState = 0;
@@ -80,7 +80,7 @@ std::string Handler::GetRootLocation(std::string uri, std::string locationPath, 
 // Generate a response header from the recieved argements
 void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
 {
-	// 
+	//
 	std::stringstream header;
 
 	header << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
@@ -208,7 +208,7 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 
 // Check for Possible error in the Request
 bool Handler::validateRequest()
-	// if both Transfer-Encoding and Content-Length not provided
+// if both Transfer-Encoding and Content-Length not provided
 {
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
@@ -324,6 +324,54 @@ bool Handler::validateURI(const std::string &uri)
 
 // -------------------------------- POST method ----------------------
 
+void Handler::chunkedPost(char *body, int bytesreceived)
+{
+	if (this->_chunkSize > bytesreceived)
+	{
+		write(this->_postFileFd, body, bytesreceived);
+		this->_chunkSize -= bytesreceived;
+		return;
+	}
+
+	write(this->_postFileFd, body, this->_chunkSize);
+	bytesreceived -= this->_chunkSize;
+	body += this->_chunkSize;
+	this->_chunkHex.clear();
+	this->_chunkHexState = 0;
+	this->_chunkSize = 0;
+
+	//  Update chunk size
+	// _chunkHexStates:
+	// 0: Still in the \r\n before the hex
+	// 1: in the hex number
+	// 2: in the \r\n after the hex
+	int i = 0;
+	while (this->_chunkHexState == 0 && i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+		i++;
+
+	//std::cout << "-> 2 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
+	if (i < bytesreceived && body[i] != '\r' && body[i] != '\n')
+	{
+		for (; i < bytesreceived && body[i] != '\r'; i++)
+			this->_chunkHex.push_back(body[i]);
+		this->_chunkHexState = 1;
+		if (i < bytesreceived && body[i] == '\r')
+		{
+			this->_chunkHexState = 2;
+			while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+				i++;
+			if ((i < bytesreceived && body[i] != '\r' || body[i] != '\n') || (i == bytesreceived && body[i - 1] == '\n'))
+				this->_chunkHexState = 0;
+		}
+	}
+
+	std::stringstream ss;
+	ss << std::hex << this->_chunkHex;
+	ss >> this->_chunkSize;
+
+	chunkedPost(body, bytesreceived);
+}
+
 int Handler::HandlePost(char *body, int bytesreceived)
 {
 	std::string boundary;
@@ -363,29 +411,29 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	else if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
 	{
 		int i = 0, rem = bytesreceived;
-		for(; i < bytesreceived; i++)
+		for (; i < bytesreceived; i++)
 		{
-			//std::cout << "start -> " << this->_chunkSize << " | " << rem << '\n';
-			// Update chunk size
+			// std::cout << "start -> " << this->_chunkSize << " | " << rem << '\n';
+			//  Update chunk size
 			if (this->_chunkSize == 0)
 			{
 				int tmp = i;
 				std::cout << "-> 1 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
 				if (this->_chunkHexState == 2 || this->_chunkHexState == 0)
-					while ( i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+					while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
 						i++;
-				
+
 				std::cout << "-> 2 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
 				if (this->_chunkHexState == 1 || this->_chunkHexState == 0)
 				{
 					for (; i < bytesreceived && body[i] != '\r'; i++)
 						this->_chunkHex.push_back(body[i]);
-					while ( i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+					while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
 						i++;
 					if (i == bytesreceived && (body[i - 1] == '\r' || body[i - 1] == '\n'))
 						this->_chunkHexState = 2;
 				}
-			
+
 				std::cout << "-> 3 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
 				if (this->_chunkHex == "0")
 				{
@@ -420,23 +468,23 @@ int Handler::HandlePost(char *body, int bytesreceived)
 			// write(this->_postFileFd, body + i, 1);
 			// this->_chunkSize--;
 		}
-			this->_chunkHex.clear();
-			this->_chunkHexState = 0;
+		this->_chunkHex.clear();
+		this->_chunkHexState = 0;
 		if (this->_chunkSize <= 0)
 		{
-			while(i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+			while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
 				i++;
 
 			if (i < bytesreceived && body[i] != '\r' && body[i] != '\n')
 			{
 				this->_chunkHexState = 1;
 
-				for(; i < bytesreceived && body[i] != '\r'; i++)
+				for (; i < bytesreceived && body[i] != '\r'; i++)
 					this->_chunkHex.push_back(body[i]);
-				
+
 				if (body[i] == '\r')
 				{
-					while(i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+					while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
 						i++;
 
 					if (body[i - 1] == '\n')
@@ -486,10 +534,10 @@ int Handler::HandleGet()
 		{
 			if (_path[_path.size() - 1] != '/')
 				_path += '/';
-			
+
 			if (this->_workingLocation.GetIndexesVec().empty() == 0)
 			{
-				//case of valid index file so you shuold handle cgi or not
+				// case of valid index file so you shuold handle cgi or not
 				std::string indexfilepath;
 
 				indexfilepath = _path;
@@ -499,7 +547,7 @@ int Handler::HandleGet()
 			}
 			else
 			{
-				//case of no index file and should check autoindex
+				// case of no index file and should check autoindex
 				if (this->_workingLocation.GetAutoIndex() == 1)
 				{
 					DIR *DirPtr;
@@ -553,12 +601,10 @@ int Handler::HandleGet()
 						return (0);
 				}
 			}
-			if (this->_workingLocation.GetCgiInfo().path == "n/a" 
-				|| this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type
-				|| (indexfileflag == 1))//regular file, non valid cgi extension and index file present with cgi off
+			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
 			{
 				struct stat file;
-				
+
 				if (this->_headerflag == 0)
 				{
 					std::string filext = this->_shared.fileExtention(_path);
@@ -587,7 +633,6 @@ int Handler::HandleGet()
 	{
 		this->sendCodeResponse("404");
 		return (0);
-
 	}
 	return 1;
 }
@@ -596,10 +641,10 @@ int Handler::HandleGet()
 
 void Handler::DeleteDirectory(const char *path)
 {
-	DIR				*directory;
-	struct dirent	*entry;
-	struct stat		file;
-	char 			subdir[256];
+	DIR *directory;
+	struct dirent *entry;
+	struct stat file;
+	char subdir[256];
 
 	// open a directory
 	if ((directory = opendir(path)) == NULL)
@@ -654,7 +699,7 @@ int Handler::HandleDelete()
 {
 	struct stat file;
 	std::string path;
-	
+
 	path = this->_path;
 	if (stat(path.c_str(), &file) == 0)
 	{
