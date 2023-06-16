@@ -64,7 +64,7 @@ private:
 	void sendCodeResponse(std::string statusCode);
 	std::string generateListDir(std::string statusCode, std::string ls);
 	void DeleteFile(const char *path);
-	void DeleteDirectory(const char *path);
+	int	DeleteDirectory(const char *path);
 };
 
 #endif

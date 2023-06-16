@@ -76,7 +76,7 @@ void Server::Start()
     bytesreceived = 0;
     while (TRUE)
     {
-        // signal(SIGPIPE, SIG_IGN);
+        signal(SIGPIPE, SIG_IGN);
         // std::cout << "Max fd-> " << maxfds << std::endl;
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
@@ -86,6 +86,7 @@ void Server::Start()
         activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
         if (activity == -1)
            perror("Error: Select Failed -> ");
+        std::cout << "Max Fd -> " << maxfds << std::endl;
         /* 
             ^ Catching an activity and Accepting the new conenction 
             ^ Always true whenever a new connection came to the server
