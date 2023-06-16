@@ -1,5 +1,7 @@
 #include "../includes/Server.hpp"
 
+#define FAILURE 0
+
 Server::Server(ServerConfig &config)
 {
     this->_config = config;
@@ -125,7 +127,7 @@ void Server::Start()
             if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
             {
                 // Connection Keep-Alive 
-                if (itb->_client_handler.Driver(requested_data, bytesreceived) == 0)
+                if (itb->_client_handler.Driver(requested_data, bytesreceived) == FAILURE)
                 {
                     DropClient();
                     continue;

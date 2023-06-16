@@ -8,7 +8,7 @@ Handler::Handler()
     this->_headerflag = 0;
 	this->_chunkSize = 0;
 	this->_postRecv = 0;
-	this->_preChunk[9] = '\n';
+	this->_chunkHexState = 0;
 }
 
 //  ------------- ACCESSOR --------------------
@@ -326,9 +326,8 @@ bool Handler::validateURI(const std::string &uri)
 
 int Handler::HandlePost(char *body, int bytesreceived)
 {
-	this->_postRecv += bytesreceived;
 	std::string boundary;
-	std::string mimeType = ""; // Default MIME type
+	std::string mimeType = "";
 	// Save MIME type and boundary if it exist
 	if (this->_req_header.find("Content-Type") != this->_req_header.end())
 	{
@@ -363,28 +362,32 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	}
 	else if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
 	{
-		for (int i = 0; i < bytesreceived; i++)
+		int i = 0, rem = bytesreceived;
+		for(; i < bytesreceived; i++)
 		{
+			//std::cout << "start -> " << this->_chunkSize << " | " << rem << '\n';
+			// Update chunk size
 			if (this->_chunkSize == 0)
 			{
-				std::string tmp;
-				while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
-					i++;
-
-				if (i == 0)
+				int tmp = i;
+				std::cout << "-> 1 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
+				if (this->_chunkHexState == 2 || this->_chunkHexState == 0)
+					while ( i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+						i++;
+				
+				std::cout << "-> 2 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
+				if (this->_chunkHexState == 1 || this->_chunkHexState == 0)
 				{
-					int j = 9;
-					for (; j >= 0; j--)
-						if (this->_preChunk[j] == '\n')
-							break;
-					j++;
-					for (; j < 10 && this->_preChunk[j] != '\r'; j++)
-						tmp.push_back(this->_preChunk[j]);
+					for (; i < bytesreceived && body[i] != '\r'; i++)
+						this->_chunkHex.push_back(body[i]);
+					while ( i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+						i++;
+					if (i == bytesreceived && (body[i - 1] == '\r' || body[i - 1] == '\n'))
+						this->_chunkHexState = 2;
 				}
-				for (; i < bytesreceived && body[i] != '\r'; i++)
-					tmp.push_back(body[i]);
-
-				if (tmp.empty() || tmp == "0")
+			
+				std::cout << "-> 3 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
+				if (this->_chunkHex == "0")
 				{
 					this->sendCodeResponse("201");
 					close(this->_postFileFd);
@@ -393,23 +396,68 @@ int Handler::HandlePost(char *body, int bytesreceived)
 				else
 				{
 					std::stringstream ss;
-					ss << std::hex << tmp;
+					ss << std::hex << this->_chunkHex;
 					ss >> this->_chunkSize;
-					i++;
-					continue;
+				}
+				rem -= (i - tmp);
+			}
+			std::cout << " end -> " << this->_chunkSize << " | " << rem << '\n';
+			if (this->_chunkSize <= rem)
+			{
+				write(this->_postFileFd, body + i, this->_chunkSize);
+				i += this->_chunkSize;
+				rem -= this->_chunkSize;
+				this->_chunkHex.clear();
+				this->_chunkHexState = 0;
+				this->_chunkSize = 0;
+			}
+			else if (rem > 0)
+			{
+				write(this->_postFileFd, body + i, rem);
+				this->_chunkSize -= rem;
+				break;
+			}
+			// write(this->_postFileFd, body + i, 1);
+			// this->_chunkSize--;
+		}
+			this->_chunkHex.clear();
+			this->_chunkHexState = 0;
+		if (this->_chunkSize <= 0)
+		{
+			while(i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+				i++;
+
+			if (i < bytesreceived && body[i] != '\r' && body[i] != '\n')
+			{
+				this->_chunkHexState = 1;
+
+				for(; i < bytesreceived && body[i] != '\r'; i++)
+					this->_chunkHex.push_back(body[i]);
+				
+				if (body[i] == '\r')
+				{
+					while(i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+						i++;
+
+					if (body[i - 1] == '\n')
+						this->_chunkHexState = 3;
+					else
+						this->_chunkHexState = 2;
+					std::cout << "----------------> I m here \n";
 				}
 			}
-			write(this->_postFileFd, &body[i], 1);
-			this->_chunkSize--;
 		}
-		for (int i = 0; i < 10; i++)
-			this->_preChunk[i] = body[bytesreceived - 10 + i];
 	}
 	else
 	{
+		long long remmining = std::stoll(this->_req_header["Content-Length"]) - this->_postRecv;
 		// Write the request body data to the file
-		write(this->_postFileFd, body, bytesreceived);
+		if (bytesreceived <= remmining)
+			write(this->_postFileFd, body, bytesreceived);
+		else
+			write(this->_postFileFd, body, remmining);
 
+		this->_postRecv += bytesreceived;
 		// std::cout << bytesreceived << " " << this->_postRecv << std::endl;
 		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
 		{
@@ -441,7 +489,6 @@ int Handler::HandleGet()
 			
 			if (this->_workingLocation.GetIndexesVec().empty() == 0)
 			{
-				std::cout << "Is indexes vec empty ->>" << this->_workingLocation.GetIndexesVec().empty() << "<<-\n";
 				//case of valid index file so you shuold handle cgi or not
 				std::string indexfilepath;
 
@@ -508,14 +555,13 @@ int Handler::HandleGet()
 			}
 			if (this->_workingLocation.GetCgiInfo().path == "n/a" 
 				|| this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type
-				|| (indexfileflag == 1))//condition that includes also non valid cgi extension
+				|| (indexfileflag == 1))//regular file, non valid cgi extension and index file present with cgi off
 			{
 				struct stat file;
 				
 				if (this->_headerflag == 0)
 				{
-					std::string filext = _path.substr(_path.find_last_of('.'), _path.length());
-					std::cout << "file extention is ->" << filext << "\n";
+					std::string filext = this->_shared.fileExtention(_path);
 
 					requested_file = open(this->_path.c_str(), O_RDONLY);
 					stat(this->_path.c_str(), &file);
@@ -528,8 +574,7 @@ int Handler::HandleGet()
 				if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
 				{
 					indexfileflag = 0;
-					perror("Error : Send <> -> ");
-					//This added
+					perror("Error (Send) -> ");
 					close(requested_file);
 					return (0);
 				}
@@ -551,15 +596,16 @@ int Handler::HandleGet()
 
 void Handler::DeleteDirectory(const char *path)
 {
-	DIR *directory;
-	struct dirent *entry;
-	struct stat file;
-	char subdir[256];
+	DIR				*directory;
+	struct dirent	*entry;
+	struct stat		file;
+	char 			subdir[256];
 
 	// open a directory
 	if ((directory = opendir(path)) == NULL)
 	{
 		std::cerr << "Cannot Open Directory: " << path << std::endl;
+		sendCodeResponse("403");
 		return;
 	}
 	// read the contents of the directory
@@ -570,14 +616,12 @@ void Handler::DeleteDirectory(const char *path)
 		snprintf(subdir, sizeof(subdir), "%s/%s", path, entry->d_name);
 		if (stat(subdir, &file) == 0)
 		{
-			if (S_ISREG(file.st_mode))
+			if (S_ISREG(file.st_mode) && (file.st_mode & S_IWUSR))
 			{
-				std::cout << "File -> " << subdir << std::endl;
 				DeleteFile(subdir);
 			}
 			else if (S_ISDIR(file.st_mode))
 			{
-				std::cout << "Dir -> " << subdir << std::endl;
 				DeleteDirectory(subdir);
 			}
 		}
@@ -587,7 +631,6 @@ void Handler::DeleteDirectory(const char *path)
 		}
 	}
 	closedir(directory);
-	std::cout << "Path -> " << path << std::endl;
 	if (rmdir(path) == 0)
 	{
 		std::cout << path << ": Directory deleted successfully" << std::endl;
@@ -610,55 +653,54 @@ void Handler::DeleteFile(const char *path)
 int Handler::HandleDelete()
 {
 	struct stat file;
-	std::string path = this->_path;
-
-	// path = GetRootLocation(_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
-
+	std::string path;
+	
+	path = this->_path;
 	if (stat(path.c_str(), &file) == 0)
 	{
 		if (S_ISREG(file.st_mode))
 		{
-			if (this->_config.GetCgiInfo().type == "n/a")
+			if (S_ISREG(file.st_mode) && (file.st_mode & S_IWUSR))
 			{
+				std::cout << "Yes Permissions" << std::endl;
 				DeleteFile(path.c_str());
 				sendResponseHeader("204", ".html", "", file.st_size);
-				// No CGI
+				return (0);
 			}
 			else
 			{
-				// Run CGI
+				std::cout << "No permissions" << std::endl;
+				sendCodeResponse("403");
+				return (0);
 			}
 		}
 		else if (S_ISDIR(file.st_mode))
 		{
 			if (path[path.size() - 1] == '/')
 			{
-				if (this->_config.GetCgiInfo().type == "n/a")
+				if (S_ISDIR(file.st_mode) && (file.st_mode & S_IWUSR))
 				{
 					DeleteDirectory(path.c_str());
 					sendResponseHeader("204", ".html", "", file.st_size);
-					// No Cgi
+					return (0);
 				}
 				else
 				{
-					//  Check on index file validation
-					// if (check index file)
-					// Run CGI
-					// else
-					// {
-					// 	sendCodeResponse("403");
-					// }
+					std::cout << "No permissions" << std::endl;
+					sendCodeResponse("403");
+					return (0);
 				}
 			}
 			else
 			{
 				sendCodeResponse("409");
+				return 0;
 			}
 		}
 	}
 	else
 	{
-		std::cerr << "File or Directory doesn't exist :(" << std::endl;
+		// std::cerr << "File or Directory doesn't exist :(" << std::endl;
 		sendCodeResponse("404");
 		return 0;
 	}

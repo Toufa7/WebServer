@@ -37,6 +37,8 @@ private:
 	std::string _uri; // The Request-URI (Uniform Resource Identifier)
 	std::string _path;
 	std::string _querystring;
+	std::string _chunkHex;
+	int _chunkHexState;
 	Shared _shared;
 	ServerConfig _config;
 	ServerLocation _workingLocation;
@@ -44,7 +46,6 @@ private:
 	char buffer[CHUNK_SIZE];
 	int bytesread, bytessent;
 	int _postRecv, _chunkSize;
-	char _preChunk[10];
 	int _postFileFd;
 	int _headerflag;
 
