@@ -53,7 +53,7 @@ private:
 	int HandlePost(char *body, int bytesreceived);
 	int HandleGet();
 	int HandleDelete();
-	void chunkedPost(char *body, int bytesreceived);
+	int chunkedPost(char *body, int bytesreceived);
 	int HandleCgi(std::string path, std::string method, int header_flag);
 	char **CgiSetEnv(std::string method);
 	bool validateRequest();

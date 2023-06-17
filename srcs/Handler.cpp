@@ -34,7 +34,7 @@ void Handler::setConfig(ServerConfig &config)
 
 int Handler::Driver(char *requested_data, int bytesreceived)
 {
-	std::cout << requested_data << std::endl;
+	// std::cout << requested_data << std::endl;
 	// std::cerr << "--------> in Driver bytesreceived is: " << bytesreceived << std::endl;
 	int re = 1;
 	if (this->_headerflag == 0)
@@ -48,7 +48,7 @@ int Handler::Driver(char *requested_data, int bytesreceived)
 		else if (this->_method == "DELETE")
 			re = this->HandleDelete();
 	}
-	this->_headerflag++;
+	this->_headerflag = 1;
 	return re;
 }
 
@@ -174,7 +174,7 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 	std::string request = req;
 	size_t header_len = request.find("\r\n\r\n");				  // Find the end of the request header
 	std::string header = request.substr(0, header_len);			  // Save the header
-	body = req + header_len + 4, bytesreceived -= header_len + 4; // Save the body
+	body = req + header_len + 2, bytesreceived -= header_len + 2; // Save the body
 	std::stringstream request_stream(header);
 
 	request_stream >> std::skipws >> std::ws >> this->_method; // Streaming methode into _methode while taking care of white spaces
@@ -189,11 +189,6 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 		value = current_line.substr(delimiter_position + 2, current_line.length()); // [delimiter_position + 2] to remove the extra space before value
 		this->_req_header[key] = value;												// storing key and value in map
 	}
-	// std::cout << header << std::endl;
-	// std::cout << "\n------------------------------\n\n";
-	// std::cout << body << std::endl;
-	// printRequstData();
-	// Validate request content
 	if (!this->validateRequest())
 		return 0;
 
@@ -208,7 +203,6 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 
 // Check for Possible error in the Request
 bool Handler::validateRequest()
-// if both Transfer-Encoding and Content-Length not provided
 {
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
@@ -216,6 +210,7 @@ bool Handler::validateRequest()
 		this->sendCodeResponse("501");
 		return false;
 	}
+	// if both Transfer-Encoding and Content-Length not provided
 	if (this->_method == "POST" && this->_req_header.find("Transfer-Encoding") == this->_req_header.end() &&
 		this->_req_header.find("Content-Length") == this->_req_header.end())
 	{
@@ -293,17 +288,7 @@ bool Handler::matchLocation()
 		return false;
 	}
 
-	// std::cout << "uri is : " << this->_uri << '\n';
 	_path = GetRootLocation(this->_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
-	std::cout << "Path -> " << _path << std::endl;
-	//_path += '/';
-	// std::cout << "Path is : " << _path << '\n';
-	// If location not found send a "not found" response
-	// if (i == serverLocations.size())
-	// {
-	// 	this->sendCodeResponse("404");
-	// 	return false;
-	// }
 
 	return true;
 }
@@ -324,52 +309,92 @@ bool Handler::validateURI(const std::string &uri)
 
 // -------------------------------- POST method ----------------------
 
-void Handler::chunkedPost(char *body, int bytesreceived)
+int Handler::chunkedPost(char *body, int bytesreceived)
 {
-	if (this->_chunkSize > bytesreceived)
-	{
-		write(this->_postFileFd, body, bytesreceived);
-		this->_chunkSize -= bytesreceived;
-		return;
-	}
-
-	write(this->_postFileFd, body, this->_chunkSize);
-	bytesreceived -= this->_chunkSize;
-	body += this->_chunkSize;
-	this->_chunkHex.clear();
-	this->_chunkHexState = 0;
-	this->_chunkSize = 0;
-
 	//  Update chunk size
 	// _chunkHexStates:
 	// 0: Still in the \r\n before the hex
 	// 1: in the hex number
 	// 2: in the \r\n after the hex
-	int i = 0;
-	while (this->_chunkHexState == 0 && i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
-		i++;
 
-	//std::cout << "-> 2 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
-	if (i < bytesreceived && body[i] != '\r' && body[i] != '\n')
+	// std::cerr << "1: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
+	if (this->_chunkHexState == 2)
 	{
-		for (; i < bytesreceived && body[i] != '\r'; i++)
-			this->_chunkHex.push_back(body[i]);
-		this->_chunkHexState = 1;
-		if (i < bytesreceived && body[i] == '\r')
-		{
-			this->_chunkHexState = 2;
-			while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
-				i++;
-			if ((i < bytesreceived && body[i] != '\r' || body[i] != '\n') || (i == bytesreceived && body[i - 1] == '\n'))
-				this->_chunkHexState = 0;
-		}
+		int i = 0;
+		while (this->_chunkHexState == 2 && i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+			i++;
+		this->_chunkHexState = 0;
+		body += i, bytesreceived -= i;
+		// std::cerr << "2: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 	}
+	if (this->_chunkSize <= 0)
+	{
+		int i = 0;
 
-	std::stringstream ss;
-	ss << std::hex << this->_chunkHex;
-	ss >> this->_chunkSize;
+		while (this->_chunkHexState == 0 && i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+			i++;
+		// std::cerr << "i is: " << i << std::endl;
+		
 
-	chunkedPost(body, bytesreceived);
+		if (i == bytesreceived && body[i - 1] == '\n')
+			this->_chunkHexState = 1;
+		else
+		{
+			// std::cerr << "3: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
+			for (; i < bytesreceived && body[i] != '\r'; i++)
+				this->_chunkHex.push_back(body[i]);
+			this->_chunkHexState = 1;
+		// std::cerr << "i is: " << i << std::endl;
+			// std::cerr << "4: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
+			if (i < bytesreceived && body[i] == '\r')
+			{
+				this->_chunkHexState = 2;
+				while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
+					i++;
+		// std::cerr << "i is: " << i << std::endl;
+				if ((i < bytesreceived && (body[i] != '\r' || body[i] != '\n')) || (i == bytesreceived && body[i - 1] == '\n'))
+					this->_chunkHexState = 0;
+		// std::cerr << "i is: " << i << std::endl;
+				// std::cerr << "5: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
+			}
+		}
+		// std::cerr << "6: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
+		// std::cerr << "i is: " << i << std::endl;
+		if (this->_chunkHexState == 1)
+			return 1;
+
+		std::stringstream ss;
+		ss << std::hex << this->_chunkHex;
+		ss >> this->_chunkSize;
+		if (this->_chunkHex == "0" || this->_chunkSize <= 0)
+		{
+			this->sendCodeResponse("201");
+			close(this->_postFileFd);
+			return 0;
+		}
+		this->_chunkHex.clear();
+		if (bytesreceived - i <= 0)
+			return 1;
+
+		body += i, bytesreceived -= i;
+	}
+	// std::cerr << "7: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
+
+	if (this->_chunkSize >= bytesreceived && bytesreceived > 0)
+	{
+		write(this->_postFileFd, body, bytesreceived);
+		this->_chunkSize -= bytesreceived;
+		return 1;
+	}
+	else if (this->_chunkSize > 0)
+	{
+		write(this->_postFileFd, body, this->_chunkSize);
+		bytesreceived -= this->_chunkSize;
+		body += this->_chunkSize;
+		this->_chunkSize = 0;
+		chunkedPost(body, bytesreceived);
+	}
+	return 1;
 }
 
 int Handler::HandlePost(char *body, int bytesreceived)
@@ -395,6 +420,11 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	{
 		std::string fileName = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
 		this->_postFileFd = open(fileName.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0777);
+		if (stat(_path.c_str(), &s) != 0)
+		{
+			this->sendCodeResponse("404");
+			return 0;
+		}
 		if (this->_postFileFd < 0)
 		{
 			this->sendCodeResponse("500");
@@ -402,99 +432,17 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		}
 	}
 
-	if (!boundary.empty())
+	// if (!boundary.empty())
+	// {
+	// 	// TODO: boundry
+	// 	// std::cerr << "Post boundry\n";
+	// 	return 0;
+	// }
+	// else 
+	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
 	{
-		// TODO: boundry
-		std::cerr << "Post boundry\n";
-		return 0;
-	}
-	else if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
-	{
-		int i = 0, rem = bytesreceived;
-		for (; i < bytesreceived; i++)
-		{
-			// std::cout << "start -> " << this->_chunkSize << " | " << rem << '\n';
-			//  Update chunk size
-			if (this->_chunkSize == 0)
-			{
-				int tmp = i;
-				std::cout << "-> 1 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
-				if (this->_chunkHexState == 2 || this->_chunkHexState == 0)
-					while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
-						i++;
-
-				std::cout << "-> 2 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
-				if (this->_chunkHexState == 1 || this->_chunkHexState == 0)
-				{
-					for (; i < bytesreceived && body[i] != '\r'; i++)
-						this->_chunkHex.push_back(body[i]);
-					while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
-						i++;
-					if (i == bytesreceived && (body[i - 1] == '\r' || body[i - 1] == '\n'))
-						this->_chunkHexState = 2;
-				}
-
-				std::cout << "-> 3 | i: " << i << " | " << this->_chunkHex << "| " << _chunkHexState << '\n';
-				if (this->_chunkHex == "0")
-				{
-					this->sendCodeResponse("201");
-					close(this->_postFileFd);
-					return 0;
-				}
-				else
-				{
-					std::stringstream ss;
-					ss << std::hex << this->_chunkHex;
-					ss >> this->_chunkSize;
-				}
-				rem -= (i - tmp);
-			}
-			std::cout << " end -> " << this->_chunkSize << " | " << rem << '\n';
-			if (this->_chunkSize <= rem)
-			{
-				write(this->_postFileFd, body + i, this->_chunkSize);
-				i += this->_chunkSize;
-				rem -= this->_chunkSize;
-				this->_chunkHex.clear();
-				this->_chunkHexState = 0;
-				this->_chunkSize = 0;
-			}
-			else if (rem > 0)
-			{
-				write(this->_postFileFd, body + i, rem);
-				this->_chunkSize -= rem;
-				break;
-			}
-			// write(this->_postFileFd, body + i, 1);
-			// this->_chunkSize--;
-		}
-		this->_chunkHex.clear();
-		this->_chunkHexState = 0;
-		if (this->_chunkSize <= 0)
-		{
-			while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
-				i++;
-
-			if (i < bytesreceived && body[i] != '\r' && body[i] != '\n')
-			{
-				this->_chunkHexState = 1;
-
-				for (; i < bytesreceived && body[i] != '\r'; i++)
-					this->_chunkHex.push_back(body[i]);
-
-				if (body[i] == '\r')
-				{
-					while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
-						i++;
-
-					if (body[i - 1] == '\n')
-						this->_chunkHexState = 3;
-					else
-						this->_chunkHexState = 2;
-					std::cout << "----------------> I m here \n";
-				}
-			}
-		}
+		// std::cerr << "bytesreceived in the statrt: " << bytesreceived << std::endl;
+		return this->chunkedPost(body, bytesreceived);
 	}
 	else
 	{

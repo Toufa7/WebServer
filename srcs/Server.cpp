@@ -97,10 +97,12 @@ void Server::Start()
         // std::cout << "List Size -> " << _clients.size() << std::endl;
         for (itb = _clients.begin(); itb != _clients.end();)
         {
+            bytesreceived = 0;
             active_clt = itb->GetCltSocket();
             /* 
                 ? Socket is ready to read
             */
+            // bzero(requested_data, CHUNK_SIZE);
             if (FD_ISSET(active_clt, &tmpfdsread))
             {
                 bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
@@ -124,7 +126,7 @@ void Server::Start()
             /* 
                 ~ Socket is ready to write
             */
-            if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
+            if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true && bytesreceived > 0)
             {
                 // Connection Keep-Alive 
                 if (itb->_client_handler.Driver(requested_data, bytesreceived) == FAILURE)
