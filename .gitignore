@@ -10,3 +10,4 @@ upload
 .idea
 .DS_Store
 conf/
+logs
