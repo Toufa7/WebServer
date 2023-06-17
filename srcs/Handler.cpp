@@ -76,7 +76,7 @@ std::string Handler::GetRootLocation(std::string uri, std::string locationPath, 
 }
 
 // Generate a response header from the recieved argements
-void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
+void Handler::SendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
 {
 	// 
 	std::stringstream header;
@@ -154,7 +154,7 @@ void Handler::sendCodeResponse(std::string statusCode)
 		}
 		htmlContent = res;
 	}
-	sendResponseHeader(statusCode, ".html", "", htmlContent.length());
+	SendResponseHeader(statusCode, ".html", "", htmlContent.length());
 	if (send(this->client_socket, htmlContent.c_str(), htmlContent.length(), 0) == -1)
 	{
 		perror("Error : Send <Error Response> ");
@@ -194,7 +194,7 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 	// std::cout << body << std::endl;
 	// printRequstData();
 	// Validate request content
-	if (!this->validateRequest())
+	if (!this->ValidateRequest())
 		return 0;
 
 	if (this->_method == "GET")
@@ -207,7 +207,7 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 }
 
 // Check for Possible error in the Request
-bool Handler::validateRequest()
+bool Handler::ValidateRequest()
 	// if both Transfer-Encoding and Content-Length not provided
 {
 	// if Transfer-Encoding exist and not match [chunked]
@@ -223,7 +223,7 @@ bool Handler::validateRequest()
 		return false;
 	}
 	// URI should start with a leading slash ("/") and not contain any illegal characters
-	if (!this->validateURI(this->_uri))
+	if (!this->ValidateURI(this->_uri))
 	{
 		this->sendCodeResponse("400");
 		return false;
@@ -241,11 +241,11 @@ bool Handler::validateRequest()
 		this->sendCodeResponse("413");
 		return false;
 	}
-	return this->matchLocation();
+	return this->MatchLocation();
 }
 
 // match location from the config file and validate method
-bool Handler::matchLocation()
+bool Handler::MatchLocation()
 {
 	this->_path = this->_uri;
 	std::vector<ServerLocation> serverLocations = this->_config.GetLocationsVec();
@@ -282,7 +282,7 @@ bool Handler::matchLocation()
 	if (this->_workingLocation.GetRedirectionInfo().RedirectionFlag)
 	{
 		_path = this->_workingLocation.GetRedirectionInfo().RedirectionPath;
-		this->sendResponseHeader(this->_workingLocation.GetRedirectionInfo().RedirectionCode, "", _path, 0);
+		this->SendResponseHeader(this->_workingLocation.GetRedirectionInfo().RedirectionCode, "", _path, 0);
 		return false;
 	}
 
@@ -309,7 +309,7 @@ bool Handler::matchLocation()
 }
 
 // Check for any any illegal characters in the URI
-bool Handler::validateURI(const std::string &uri)
+bool Handler::ValidateURI(const std::string &uri)
 {
 	// Check if the URI starts with a leading slash ("/")
 	if (uri.empty() || uri[0] != '/')
@@ -522,7 +522,7 @@ int Handler::HandleGet()
 					{
 						std::string lsDir = generateListDir("200", DirStr);
 						if (this->_headerflag == 0)
-							sendResponseHeader("200", ".html", "", lsDir.length());
+							SendResponseHeader("200", ".html", "", lsDir.length());
 						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
 						{
 							perror("Error : Send <Index Of>	=>	");
@@ -564,7 +564,7 @@ int Handler::HandleGet()
 					std::string filext = this->_shared.fileExtention(_path);
 					requested_file = open(this->_path.c_str(), O_RDONLY);
 					stat(this->_path.c_str(), &file);
-					sendResponseHeader("200", filext, "", file.st_size);
+					SendResponseHeader("200", filext, "", file.st_size);
 				}
 				bytesread = read(requested_file, buffer, sizeof(buffer));
 				if (bytesread == -1)
@@ -659,7 +659,7 @@ int Handler::HandleDelete()
 			if (S_ISREG(file.st_mode) && (file.st_mode & S_IWUSR))
 			{
 				DeleteFile(path.c_str());
-				sendResponseHeader("204", ".html", "", file.st_size);
+				SendResponseHeader("204", ".html", "", file.st_size);
 				return (0);
 			}
 			/*
@@ -683,7 +683,7 @@ int Handler::HandleDelete()
 					if (DeleteDirectory(path.c_str()) == 1)
 						return (0);
 					else
-						sendResponseHeader("204", ".html", "", file.st_size);
+						SendResponseHeader("204", ".html", "", file.st_size);
 				}
 				/*
 					! No permissions
