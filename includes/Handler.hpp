@@ -31,6 +31,7 @@ public:
 	int _cgiTmpFilefd;
 	std::string _cgiTmpFileName;
 	std::map<std::string, std::string> _req_header;
+	int requested_file;
 
 private:
 	std::string _method;
@@ -42,7 +43,6 @@ private:
 	Shared _shared;
 	ServerConfig _config;
 	ServerLocation _workingLocation;
-	int requested_file;
 	char buffer[CHUNK_SIZE];
 	int bytesread, bytessent;
 	int _postRecv, _chunkSize;

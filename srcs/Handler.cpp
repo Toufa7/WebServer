@@ -165,6 +165,8 @@ void Handler::sendCodeResponse(std::string statusCode)
 
 int Handler::parseRequestHeader(char *req, int bytesreceived)
 {
+	std::cout << "WOWOWOOWOWOWOOWWOWO\n";
+	std::cout << req << std::endl;
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
@@ -558,24 +560,23 @@ int Handler::HandleGet()
 				struct stat file;
 				if (this->_headerflag == 0)
 				{
+					std::cout << "Open\n";
 					std::string filext = this->_shared.fileExtention(_path);
 					requested_file = open(this->_path.c_str(), O_RDONLY);
 					stat(this->_path.c_str(), &file);
 					sendResponseHeader("200", filext, "", file.st_size);
 				}
-				else
+				bytesread = read(requested_file, buffer, sizeof(buffer));
+				if (bytesread == -1)
+					perror("Error : Read <Regular File> => ");
+				bytessent = send(this->client_socket, buffer, bytesread, 0);
+				if (bytessent < 1 || bytesread < CHUNK_SIZE)
 				{
-					bytesread = read(requested_file, buffer, sizeof(buffer));
-					if (bytesread == -1)
-						perror("Error : Read <Regular File> => ");
-					bytessent = send(this->client_socket, buffer, bytesread, 0);
-					if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
-					{
-						indexfileflag = 0;
-						perror("Error : Send <Regular File>  -> ");
-						close(requested_file);
-						return (0);
-					}
+					indexfileflag = 0;
+					perror("Error : Send <Regular File>  -> ");
+					// if (close(requested_file))
+					// 	perror("Error : CLOSE <Regular File>");
+					return (0);
 				}
 				return (1);
 			}
@@ -625,6 +626,7 @@ int	Handler::DeleteDirectory(const char *path)
 		else
 		{
 			std::cerr << "Error getting file or directory " << subdir << std::endl;
+			sendCodeResponse("403");
 		}
 	}
 	closedir(directory);
@@ -638,7 +640,7 @@ int	Handler::DeleteDirectory(const char *path)
 void Handler::DeleteFile(const char *path)
 {
 	if (unlink(path) != 0)
-		perror("Error : Unlink <Delete File>	-> ");
+		perror("Error : UNLINK <Delete File>	-> ");
 }
 
 int Handler::HandleDelete()
@@ -700,7 +702,7 @@ int Handler::HandleDelete()
 		}
 	}
 	/*
-	!	File or Directory doesn't exist
+		! File or Directory doesn't exist
 	*/
 	else
 	{

@@ -33,6 +33,8 @@ void    Server::CreateServer()
 
 void Server::DropClient()
 {
+    std::cout << "Close\n";	
+    close(this->itb->_client_handler.requested_file);
     close(active_clt);
     FD_CLR(active_clt, &readfds);
     FD_CLR(active_clt, &writefds);
@@ -45,7 +47,7 @@ int Server::AcceptAddClientToSet()
     int newconnection = accept(server_socket, (struct sockaddr *)&storage_sock, &clt_addr);
     fcntl(newconnection, F_SETFL, O_NONBLOCK);
     if (newconnection == -1)
-        perror("Error: ACCEPT Failed -> ");
+        perror("Error: ACCEPT <New Connection> -> ");
     _clients.push_back(Client(newconnection));
     _clients.back()._client_handler.setConfig(this->_config);
     readyforwrite = false;
@@ -76,8 +78,7 @@ void Server::Start()
     bytesreceived = 0;
     while (TRUE)
     {
-        signal(SIGPIPE, SIG_IGN);
-        // std::cout << "Max fd-> " << maxfds << std::endl;
+        signal(SIGPIPE, SIG_IGN);   
         tmpfdsread = readfds;
         tmpfdswrite = writefds;
         /*
@@ -86,7 +87,6 @@ void Server::Start()
         activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
         if (activity == -1)
            perror("Error: Select Failed -> ");
-        std::cout << "Max Fd -> " << maxfds << std::endl;
         /* 
             ^ Catching an activity and Accepting the new conenction 
             ^ Always true whenever a new connection came to the server
@@ -95,7 +95,7 @@ void Server::Start()
         {
             client_socket = AcceptAddClientToSet();
         }
-        // std::cout << "List Size -> " << _clients.size() << std::endl;
+        std::cout << "List Size -> " << _clients.size() << "    Max Fds -> " << maxfds << std::endl;
         for (itb = _clients.begin(); itb != _clients.end();)
         {
             active_clt = itb->GetCltSocket();
@@ -113,7 +113,7 @@ void Server::Start()
                 }
                 else if (bytesreceived < 0)
                 {
-                    perror("Error: Recv failed -> ");
+                    perror("Error: RECV failed -> ");
                     DropClient();
                     continue;
                 }
