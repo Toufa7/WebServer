@@ -23,9 +23,18 @@ int main(int ac, char **av)
         configuration.ParseConfigFile(conf);
     for (size_t i = 0; i < configuration.GetServersVector().size(); i++)
     {
-        Server          WebServer(configuration.GetServersVector()[i]);
-        WebServer.Start();
+        Server  WebServer(configuration.GetServersVector()[i]);
+        WebServer.CreateServer();
+        WebServer.SelectSetsInit();
         servers.push_back(WebServer);
+    }
+
+    while (TRUE)
+    {
+        for (size_t i = 0; i < servers.size(); i++)
+        {
+            servers[i].Start();
+        }
     }
     return (0);
 }

@@ -39,6 +39,11 @@ class Server
     public:
         Server(){};
         Server(ServerConfig &config);
+
+        /*
+			* Member Variables
+		*/
+    
         int                     server_socket; // The server listen on this socket
         int                     client_socket; // The server serve the client on this socket
         struct addrinfo         server_infos;
@@ -51,9 +56,12 @@ class Server
         fd_set                  readfds, writefds, tmpfdsread, tmpfdswrite;
         int                     maxfds, activity, active_clt;
         bool                    readyforwrite;
+        struct timeval          timeout_keep_alive;
         struct timeval          timeout;
-
-    
+		
+        /*
+			* Member Functions
+		*/
         void    Init();
         void    Start();
         void    DropClient();

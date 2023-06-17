@@ -165,8 +165,6 @@ void Handler::sendCodeResponse(std::string statusCode)
 
 int Handler::parseRequestHeader(char *req, int bytesreceived)
 {
-	std::cout << "WOWOWOOWOWOWOOWWOWO\n";
-	std::cout << req << std::endl;
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
