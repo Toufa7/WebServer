@@ -122,12 +122,13 @@ void GlobalConfig::ParseConfigFile(char *av)
         InvalidConfigFile("Invalid config file: wrong extension.");
     config_file.open(file_name);
     if (!config_file)
-        InvalidConfigFile("There was an error when opening config file.");
+        InvalidConfigFile("Invalid config file: there was an error when opening config file.");
     while (config_file)
     {
         std::getline(config_file, buffer);
         read_data += buffer += '\n';
     }
+    //For the last '\n'
     read_data.pop_back();
     /*------------------------------------- End of reading -----------------------------------------*/
 
@@ -151,7 +152,7 @@ void GlobalConfig::ParseConfigFile(char *av)
                 soc = read_data.find("server ", oc + 1);
                 ParseServerConfig(server);
             }
-            if (soc < 0 || oc < 0 || oc == 0) // if soc < 0 that means there's only one server
+            if ( soc < 0 || oc < 0 || oc == 0 ) // if soc < 0 that means there's only one server, (soc < 0 || oc < 0) in case error happened break from the loop
             {
                 if (soc > 0)
                     server = read_data.substr(soc, read_data.length());
@@ -345,7 +346,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
         tmp_str.erase();
     }
     else
-        InvalidConfigFile("Invalid config file : allowed methods not found (Find allowedmwthodes).");
+        InvalidConfigFile("Invalid config file : allowed methods not found (Find allowed methodes).");
     /*------------------------------------- End of allowed methods -------------------------------------*/
 
     /*------------------------------------------ autoindex ----------------------------------------*/
@@ -395,6 +396,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
             InvalidConfigFile("Invalid config file : There was an error (Find CGI).");
         location_tmp._CgiInfo.path = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
         tmp_str.erase();
+        //you should test cgi path
     }
     /*----------------------------------- end of find cgi -----------------------------------*/
 
@@ -440,7 +442,6 @@ void    ServerConfig::ParseServerLocation(std::string location)
             key_pos = location.find("indexes ", key_pos + 1);
         }
     }
-    //do not forget to add default index
     /*-------------------------------------- end of find indexes ------------------------------------*/
     this->_LocationsVec.push_back(location_tmp);
 }
@@ -618,12 +619,6 @@ redirection&    ServerLocation::GetRedirectionInfo(void)
 {
     return (_RedirectionInfo);
 }
-
-// void ServerConfig::setClientSocket(int n)
-// {
-//     (void)
-//     // this->_clientSocket = n;
-// }
 
 std::map<std::string, std::string>& ServerConfig::GetErrorPageMap(void)
 {

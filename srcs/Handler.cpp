@@ -102,7 +102,12 @@ void Handler::SendResponseHeader(std::string statusCode, std::string fileExt, st
 
 std::string Handler::generateListDir(std::string statusCode, std::string ls)
 {
-	// 5asek tcheki wach ls 3amra wla 5awya
+	if (ls.empty() == 1)//if an error happened, check ls wether is empty or not
+	{
+		perror("Error : GenerateListDir  <Directory listing> ");
+		this->sendCodeResponse("500");
+	}
+
 	std::stringstream s(ls);
 	std::string statusMessage = this->_shared.status_codes[statusCode];
 	std::string TmpStr, res = "<html><head><title>Directory list</title></head><body><h1><ul>";
@@ -171,6 +176,11 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 
 	std::string request = req;
 	size_t header_len = request.find("\r\n\r\n");				  // Find the end of the request header
+	if (header_len == std::string::npos)
+	{
+		perror("Error : ParseRequstHeader <Finding end of request> ");
+		this->sendCodeResponse("500");
+	}
 	std::string header = request.substr(0, header_len);			  // Save the header
 	body = req + header_len + 2, bytesreceived -= header_len + 2; // Save the body
 	std::stringstream request_stream(header);
@@ -528,7 +538,7 @@ int Handler::HandleGet()
 				}
 				else
 				{
-					this->sendCodeResponse("403"); // case of no index file and no index file:handled
+					this->sendCodeResponse("403"); // case of no autoindex and no index file
 					return (0);
 				}
 			}
@@ -558,6 +568,8 @@ int Handler::HandleGet()
 					std::cout << "Open\n";
 					std::string filext = this->_shared.fileExtention(_path);
 					requested_file = open(this->_path.c_str(), O_RDONLY);
+					if (requested_file < 0)
+						perror("Error : Get <Opening file to send it> ");
 					stat(this->_path.c_str(), &file);
 					SendResponseHeader("200", filext, "", file.st_size);
 				}
@@ -582,9 +594,8 @@ int Handler::HandleGet()
 	{
 		this->sendCodeResponse("404");
 		return (0);
-
 	}
-	return 1;
+	return (1);
 }
 
 // -------------------------------- Delete method ----------------------
