@@ -2,17 +2,14 @@
 #include "Config.hpp"
 #include "Shared.hpp"
 
-// Adding a handler object that takes the working client on
-
 class Client
 {
     private:
         int             _socket;
     public:
-        // Constructor
-        ServerConfig    _cltconfig;
-        Handler _client_handler;
         Client() {};
+        ServerConfig    _cltconfig;
+        Handler         _client_handler;
         Client(int socket)
         {
             _socket = socket;

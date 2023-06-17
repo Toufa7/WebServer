@@ -5,7 +5,7 @@
 Handler::Handler()
 {
 	this->_postFileFd = -1;
-	this->_headerflag = 0;
+    this->_headerflag = 0;
 	this->_chunkSize = 0;
 	this->_postRecv = 0;
 	this->_chunkHexState = 0;
@@ -34,8 +34,6 @@ void Handler::setConfig(ServerConfig &config)
 
 int Handler::Driver(char *requested_data, int bytesreceived)
 {
-	// std::cout << requested_data << std::endl;
-	// std::cerr << "--------> in Driver bytesreceived is: " << bytesreceived << std::endl;
 	int re = 1;
 	if (this->_headerflag == 0)
 		re = this->parseRequestHeader(requested_data, bytesreceived);
@@ -78,9 +76,9 @@ std::string Handler::GetRootLocation(std::string uri, std::string locationPath, 
 }
 
 // Generate a response header from the recieved argements
-void Handler::sendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
+void Handler::SendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
 {
-	//
+	// 
 	std::stringstream header;
 
 	header << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
@@ -156,7 +154,7 @@ void Handler::sendCodeResponse(std::string statusCode)
 		}
 		htmlContent = res;
 	}
-	sendResponseHeader(statusCode, ".html", "", htmlContent.length());
+	SendResponseHeader(statusCode, ".html", "", htmlContent.length());
 	if (send(this->client_socket, htmlContent.c_str(), htmlContent.length(), 0) == -1)
 	{
 		perror("Error : Send <Error Response> ");
@@ -189,7 +187,8 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 		value = current_line.substr(delimiter_position + 2, current_line.length()); // [delimiter_position + 2] to remove the extra space before value
 		this->_req_header[key] = value;												// storing key and value in map
 	}
-	if (!this->validateRequest())
+
+	if (!this->ValidateRequest())
 		return 0;
 
 	if (this->_method == "GET")
@@ -202,7 +201,7 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 }
 
 // Check for Possible error in the Request
-bool Handler::validateRequest()
+bool Handler::ValidateRequest()
 {
 	// if Transfer-Encoding exist and not match [chunked]
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end() && this->_req_header["Transfer-Encoding"] != "chunked")
@@ -218,7 +217,7 @@ bool Handler::validateRequest()
 		return false;
 	}
 	// URI should start with a leading slash ("/") and not contain any illegal characters
-	if (!this->validateURI(this->_uri))
+	if (!this->ValidateURI(this->_uri))
 	{
 		this->sendCodeResponse("400");
 		return false;
@@ -236,11 +235,11 @@ bool Handler::validateRequest()
 		this->sendCodeResponse("413");
 		return false;
 	}
-	return this->matchLocation();
+	return this->MatchLocation();
 }
 
 // match location from the config file and validate method
-bool Handler::matchLocation()
+bool Handler::MatchLocation()
 {
 	this->_path = this->_uri;
 	std::vector<ServerLocation> serverLocations = this->_config.GetLocationsVec();
@@ -277,7 +276,7 @@ bool Handler::matchLocation()
 	if (this->_workingLocation.GetRedirectionInfo().RedirectionFlag)
 	{
 		_path = this->_workingLocation.GetRedirectionInfo().RedirectionPath;
-		this->sendResponseHeader(this->_workingLocation.GetRedirectionInfo().RedirectionCode, "", _path, 0);
+		this->SendResponseHeader(this->_workingLocation.GetRedirectionInfo().RedirectionCode, "", _path, 0);
 		return false;
 	}
 
@@ -294,7 +293,7 @@ bool Handler::matchLocation()
 }
 
 // Check for any any illegal characters in the URI
-bool Handler::validateURI(const std::string &uri)
+bool Handler::ValidateURI(const std::string &uri)
 {
 	// Check if the URI starts with a leading slash ("/")
 	if (uri.empty() || uri[0] != '/')
@@ -418,6 +417,7 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	// Create a file stream for writing
 	if (this->_headerflag == 0)
 	{
+		struct stat s;
 		std::string fileName = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
 		this->_postFileFd = open(fileName.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0777);
 		if (stat(_path.c_str(), &s) != 0)
@@ -441,7 +441,6 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	// else 
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
 	{
-		// std::cerr << "bytesreceived in the statrt: " << bytesreceived << std::endl;
 		return this->chunkedPost(body, bytesreceived);
 	}
 	else
@@ -482,10 +481,10 @@ int Handler::HandleGet()
 		{
 			if (_path[_path.size() - 1] != '/')
 				_path += '/';
-
+			
 			if (this->_workingLocation.GetIndexesVec().empty() == 0)
 			{
-				// case of valid index file so you shuold handle cgi or not
+				//case of valid index file so you shuold handle cgi or not
 				std::string indexfilepath;
 
 				indexfilepath = _path;
@@ -495,7 +494,7 @@ int Handler::HandleGet()
 			}
 			else
 			{
-				// case of no index file and should check autoindex
+				//case of no index file and should check autoindex
 				if (this->_workingLocation.GetAutoIndex() == 1)
 				{
 					DIR *DirPtr;
@@ -518,7 +517,7 @@ int Handler::HandleGet()
 					{
 						std::string lsDir = generateListDir("200", DirStr);
 						if (this->_headerflag == 0)
-							sendResponseHeader("200", ".html", "", lsDir.length());
+							SendResponseHeader("200", ".html", "", lsDir.length());
 						if (send(this->client_socket, lsDir.c_str(), lsDir.length(), 0) == -1)
 						{
 							perror("Error : Send <Index Of>	=>	");
@@ -549,27 +548,29 @@ int Handler::HandleGet()
 						return (0);
 				}
 			}
-			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
+			if (this->_workingLocation.GetCgiInfo().path == "n/a" 
+				|| this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type
+				|| (indexfileflag == 1))//regular file, non valid cgi extension and index file present with cgi off
 			{
 				struct stat file;
-
 				if (this->_headerflag == 0)
 				{
+					std::cout << "Open\n";
 					std::string filext = this->_shared.fileExtention(_path);
-
 					requested_file = open(this->_path.c_str(), O_RDONLY);
 					stat(this->_path.c_str(), &file);
-					sendResponseHeader("200", filext, "", file.st_size);
+					SendResponseHeader("200", filext, "", file.st_size);
 				}
 				bytesread = read(requested_file, buffer, sizeof(buffer));
 				if (bytesread == -1)
 					perror("Error : Read <Regular File> => ");
 				bytessent = send(this->client_socket, buffer, bytesread, 0);
-				if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
+				if (bytessent < 1 || bytesread < CHUNK_SIZE)
 				{
 					indexfileflag = 0;
-					perror("Error (Send) -> ");
-					close(requested_file);
+					perror("Error : Send <Regular File>  -> ");
+					// if (close(requested_file))
+					// 	perror("Error : CLOSE <Regular File>");
 					return (0);
 				}
 				return (1);
@@ -581,27 +582,26 @@ int Handler::HandleGet()
 	{
 		this->sendCodeResponse("404");
 		return (0);
+
 	}
 	return 1;
 }
 
 // -------------------------------- Delete method ----------------------
 
-void Handler::DeleteDirectory(const char *path)
+int	Handler::DeleteDirectory(const char *path)
 {
-	DIR *directory;
-	struct dirent *entry;
-	struct stat file;
-	char subdir[256];
+	DIR				*directory;
+	struct dirent	*entry;
+	struct stat		file;
+	char 			subdir[256];
 
-	// open a directory
 	if ((directory = opendir(path)) == NULL)
 	{
 		std::cerr << "Cannot Open Directory: " << path << std::endl;
 		sendCodeResponse("403");
-		return;
+		return (1);
 	}
-	// read the contents of the directory
 	while ((entry = readdir(directory)) != NULL)
 	{
 		if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
@@ -621,48 +621,47 @@ void Handler::DeleteDirectory(const char *path)
 		else
 		{
 			std::cerr << "Error getting file or directory " << subdir << std::endl;
+			sendCodeResponse("403");
 		}
 	}
 	closedir(directory);
-	if (rmdir(path) == 0)
+	if (rmdir(path) != 0)
 	{
-		std::cout << path << ": Directory deleted successfully" << std::endl;
+		perror("Error : RMDIR <Deleting Directory> ");
 	}
-	else
-	{
-		std::cerr << "Error deleting directory " << path << std::endl;
-	}
-	return;
+	return (0);
 }
 
 void Handler::DeleteFile(const char *path)
 {
-	if (unlink(path) == 0)
-		std::cout << path << ": File deleted successfully" << std::endl;
-	else
-		perror("Unlink -> ");
+	if (unlink(path) != 0)
+		perror("Error : UNLINK <Delete File>	-> ");
 }
 
 int Handler::HandleDelete()
 {
 	struct stat file;
 	std::string path;
-
+	
 	path = this->_path;
 	if (stat(path.c_str(), &file) == 0)
 	{
 		if (S_ISREG(file.st_mode))
 		{
+			/*
+				* Allowed Permissions
+			*/
 			if (S_ISREG(file.st_mode) && (file.st_mode & S_IWUSR))
 			{
-				std::cout << "Yes Permissions" << std::endl;
 				DeleteFile(path.c_str());
-				sendResponseHeader("204", ".html", "", file.st_size);
+				SendResponseHeader("204", ".html", "", file.st_size);
 				return (0);
 			}
+			/*
+				! No permissions
+			*/
 			else
 			{
-				std::cout << "No permissions" << std::endl;
 				sendCodeResponse("403");
 				return (0);
 			}
@@ -671,15 +670,21 @@ int Handler::HandleDelete()
 		{
 			if (path[path.size() - 1] == '/')
 			{
+				/*
+					* Allowed Permissions
+				*/
 				if (S_ISDIR(file.st_mode) && (file.st_mode & S_IWUSR))
 				{
-					DeleteDirectory(path.c_str());
-					sendResponseHeader("204", ".html", "", file.st_size);
-					return (0);
+					if (DeleteDirectory(path.c_str()) == 1)
+						return (0);
+					else
+						SendResponseHeader("204", ".html", "", file.st_size);
 				}
+				/*
+					! No permissions
+				*/
 				else
 				{
-					std::cout << "No permissions" << std::endl;
 					sendCodeResponse("403");
 					return (0);
 				}
@@ -687,15 +692,17 @@ int Handler::HandleDelete()
 			else
 			{
 				sendCodeResponse("409");
-				return 0;
+				return (0);
 			}
 		}
 	}
+	/*
+		! File or Directory doesn't exist
+	*/
 	else
 	{
-		// std::cerr << "File or Directory doesn't exist :(" << std::endl;
 		sendCodeResponse("404");
-		return 0;
+		return (0);
 	}
-	return 0;
+	return (0);
 }

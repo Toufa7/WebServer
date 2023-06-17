@@ -39,32 +39,29 @@ class Server
     public:
         Server(){};
         Server(ServerConfig &config);
-        // Server Init
+
+        /*
+			* Member Variables
+		*/
+    
         int                     server_socket; // The server listen on this socket
         int                     client_socket; // The server serve the client on this socket
         struct addrinfo         server_infos;
         struct addrinfo         *sinfo_ptr;
         struct sockaddr_storage storage_sock;
         socklen_t               clt_addr;
-        size_t                  msg_sent;
-        size_t                  msg_received;
-
-        // Multiplexing
         char                    requested_data[CHUNK_SIZE];
-        int                     content_length;
-        struct stat             infos;
-    
-    
-        // Class client {linked list socket, fd};
         char                    buffer[CHUNK_SIZE];
-        int                     bytesread, bytessent, videosize, bytesreceived, idx;
+        int                     bytesread, bytessent, bytesreceived;
         fd_set                  readfds, writefds, tmpfdsread, tmpfdswrite;
         int                     maxfds, activity, active_clt;
         bool                    readyforwrite;
+        struct timeval          timeout_keep_alive;
         struct timeval          timeout;
-
-    
-        // Member Functions
+		
+        /*
+			* Member Functions
+		*/
         void    Init();
         void    Start();
         void    DropClient();
