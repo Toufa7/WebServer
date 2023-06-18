@@ -1,13 +1,13 @@
 #include "../includes/Handler.hpp"
 
-//TO DO
+// TO DO
 
-//client should save the opened tmp file fd : done
-//content lenght POST : need to be tested cause it may not be necessary
-//body size
-//leaks:done
-//remove cgi file when done:done
-//check sys calls for error returns
+// client should save the opened tmp file fd : done
+// content lenght POST : need to be tested cause it may not be necessary
+// body size
+// leaks:done
+// remove cgi file when done:done
+// check sys calls for error returns
 
 std::string CgiHeaderFindStatus(std::string Header)
 {
@@ -34,7 +34,7 @@ std::string CgiHeaderFindStatus(std::string Header)
 
 std::string CgiBodySize(int BodySize)
 {
-    //cgi body size
+    // cgi body size
     std::string ContentLenght;
     // struct stat FileStat;
 
@@ -45,7 +45,7 @@ std::string CgiBodySize(int BodySize)
     // else
     //     ContentLenght += "0";
     ContentLenght += "\r\n";
-    
+
     return (ContentLenght);
 }
 
@@ -59,9 +59,9 @@ char **Handler::CgiSetEnv(std::string method)
                 SCRIPT_FILENAME = "SCRIPT_FILENAME=",
                 PATH_INFO = "PATH_INFO=",
                 QUERY_STRING = "QUERY_STRING=";
-                //For Post only
-                //CONTENT_TYPE = "CONTENT_TYPE=",
-                //CONTENT_LENGTH = "CONTENT_LENGTH=";
+    // For Post only
+    // CONTENT_TYPE = "CONTENT_TYPE=",
+    // CONTENT_LENGTH = "CONTENT_LENGTH=";
     REQUEST_METHOD += method;
     SCRIPT_FILENAME += this->_path.substr(_path.find_last_of('/', 0), _path.length());
     SCRIPT_NAME += this->_path.substr(_path.find_last_of('/', 0), _path.length());
@@ -69,7 +69,7 @@ char **Handler::CgiSetEnv(std::string method)
 
     if (!this->_querystring.empty())
         QUERY_STRING += this->_querystring;
-    char **newEnv = new char*[9];
+    char **newEnv = new char *[9];
 
     newEnv[0] = new char[SERVER_PROTOCOL.length()];
     newEnv[1] = new char[REDIRECT_STATUS.length()];
@@ -93,6 +93,34 @@ char **Handler::CgiSetEnv(std::string method)
     return (newEnv);
 }
 
+int Handler::postCgi()
+{
+    std::cerr << "post cgi \n";
+    std::string tmpfilename;
+    std::ifstream TmpOutFile;
+
+    TmpOutFile.setf(std::ios::binary);
+
+    char **newEnv = CgiSetEnv("POST");
+    tmpfilename = "tmpfiles/";
+    tmpfilename = this->_shared.generateFileName("tmpfiles/", ".tmp");
+
+    // this may cause back and forth calling if you add return
+    this->_cgiTmpFileName = tmpfilename;
+
+    // PHP Script child process
+    char *excearr[] = {const_cast<char *>(this->_workingLocation.GetCgiInfo().path.c_str()), const_cast<char *>(this->_path.c_str()), NULL};
+    pid_t pid = fork();
+    if (pid == 0)
+    {
+        dup2(this->_postFileFd, 0);
+        close(this->_postFileFd);
+        execve(excearr[0], excearr, newEnv);
+    }
+    waitpid(pid, NULL, WNOHANG);
+    return 0;
+}
+
 int Handler::HandleCgi(std::string path, std::string method, int header_flag)
 {
     static int var = 0;
@@ -110,16 +138,19 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
         std::cout << "Var -> " << var << std::endl;
         if (header_flag == 0)
         {
-            char **newEnv = CgiSetEnv(method); 
+            char **newEnv = CgiSetEnv(method);
             tmpfilename = "tmpfiles/";
             tmpfilename = this->_shared.generateFileName("tmpfiles/", ".tmp");
-            outFd = open(tmpfilename.c_str(), O_CREAT | O_RDWR | O_TRUNC , 0777);
+            outFd = open(tmpfilename.c_str(), O_CREAT | O_RDWR | O_TRUNC, 0777);
             if (outFd < 0)
+            {
                 this->sendCodeResponse("500");
-            //this may cause back and forth calling if you add return
+                return 0;
+            }
+            // this may cause back and forth calling if you add return
             this->_cgiTmpFileName = tmpfilename;
-            
-            //PHP Script child process
+
+            // PHP Script child process
             char *excearr[] = {const_cast<char *>(this->_workingLocation.GetCgiInfo().path.c_str()), const_cast<char *>(path.c_str()), NULL};
             pid_t CID = fork();
             if (CID == 0)
@@ -130,13 +161,13 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
                 execve(excearr[0], excearr, newEnv);
             }
             wait(0);
-            
-            //Free env
+
+            // Free env
             for (unsigned int i = 0; newEnv[i] != NULL; i++)
                 delete newEnv[i];
             delete newEnv;
-            
-            //Parsing CGI header
+
+            // Parsing CGI header
             TmpOutFile.open(this->_cgiTmpFileName.c_str());
             if (!TmpOutFile)
                 std::cout << "The file could not be opened properly\n";
@@ -147,7 +178,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
             }
             TmpOutFile.close();
 
-            //Parse header
+            // Parse header
             Header = Buf.substr(0, Buf.find("\r\n\r\n"));
             TmpOutFileStream << CgiHeaderFindStatus(Header);
             TmpOutFileStream << Header;
@@ -155,7 +186,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
             BodyPos = Buf.find("<!DOCTYPE html>");
             if (BodyPos > 0)
             {
-                Body = Buf.substr(BodyPos, (Buf.length() - BodyPos));        
+                Body = Buf.substr(BodyPos, (Buf.length() - BodyPos));
                 TmpOutFileStream << CgiBodySize(Body.length());
             }
 
@@ -165,8 +196,8 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
             if (BodyPos >= 0)
                 ParsedTmpOutFile << Body;
             ParsedTmpOutFile.close();
-    
-            this->_cgiTmpFilefd = open(this->_cgiTmpFileName.c_str(), O_RDONLY , 0777);
+
+            this->_cgiTmpFilefd = open(this->_cgiTmpFileName.c_str(), O_RDONLY, 0777);
             bytesread = read(this->_cgiTmpFilefd, buffer, sizeof(buffer));
             if (bytesread == -1)
                 perror("Error : Read <CGI>  -> ");
@@ -195,11 +226,12 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
         }
     }
     else
+    {
         this->sendCodeResponse("404");
+        return 0;
+    }
     return (1);
 }
-
-
 
 // SERVER_PROTOCOL=HTTP/1.1
 // REDIRECT_STATUS=200

@@ -298,7 +298,7 @@ bool Handler::MatchLocation()
 	}
 
 	_path = GetRootLocation(this->_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
-
+	// std::cerr << this->_config._LocationsVec[] << std::endl;
 	return true;
 }
 
@@ -428,7 +428,7 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	if (this->_headerflag == 0)
 	{
 		_postFilePath = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
-		this->_postFileFd = open(_postFilePath.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0777);
+		this->_postFileFd = open(_postFilePath.c_str(), O_CREAT | O_RDWR | O_APPEND, 0777);
 		if (stat(_path.c_str(), &s) != 0)
 		{
 			this->sendCodeResponse("404");
@@ -446,17 +446,8 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		return 0;
 	}
 
-	// if (!boundary.empty())
-	// {
-	// 	// TODO: boundry
-	// 	// std::cerr << "Post boundry\n";
-	// 	return 0;
-	// }
-	// else
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
-	{
 		return this->chunkedPost(body, bytesreceived);
-	}
 	else
 	{
 		long long remmining = std::stoll(this->_req_header["Content-Length"]) - this->_postRecv;
@@ -470,8 +461,12 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		// std::cout << bytesreceived << " " << this->_postRecv << std::endl;
 		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
 		{
+			std::cerr << this->_workingLocation.GetCgiInfo().path << std::endl;
+			if (this->_workingLocation.GetCgiInfo().path != "n/a")
+				this->postCgi();
 			this->sendCodeResponse("201");
 			close(this->_postFileFd);
+			// std::remove(this->_postFilePath.c_str());
 			return 0;
 		}
 	}
@@ -558,7 +553,7 @@ int Handler::HandleGet()
 				std::cout << "index file cgi\n";
 				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type))
 				{
-					if (this->HandleCgi(_path, "GET", _headerflag) == 0)
+					rethis->HandleCgi(_path, "GET", _headerflag) == 0)
 						return (0);
 				}
 			}
