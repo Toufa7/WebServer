@@ -552,22 +552,29 @@ int Handler::HandleGet()
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 		if ((s.st_mode & S_IFREG) || (indexfileflag == 1))
 		{
-			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a")
+			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a" || this->_workingLocation.GetCgiInfoPerl().path != "n/a")
 			{
 				// handle file cgi
-				std::cout << "index file cgi\n";
 				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPhp().type))
 				{
-					if (this->HandleCgi(_path, "GET", _headerflag) == 0)
+					if (this->HandleCgi(_path, "GET", _headerflag, this->_workingLocation.GetCgiInfoPhp()) == 0)
+						return (0);
+				}
+				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPerl().type))
+				{
+					if (this->HandleCgi(_path, "GET", _headerflag, this->_workingLocation.GetCgiInfoPerl()) == 0)
 						return (0);
 				}
 			}
-			if (this->_workingLocation.GetCgiInfoPhp().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfoPhp().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
+			if (this->_workingLocation.GetCgiInfoPhp().path == "n/a" 
+				|| this->_workingLocation.GetCgiInfoPerl().path == "n/a" 
+				|| this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfoPhp().type 
+				|| (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
 			{
+				std::cout << "GET file handler" << "\n";
 				struct stat file;
 				if (this->_headerflag == 0)
 				{
-					std::cout << "Open\n";
 					std::string filext = this->_shared.fileExtention(_path);
 					requested_file = open(this->_path.c_str(), O_RDONLY);
 					if (requested_file < 0)

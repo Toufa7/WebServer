@@ -15,29 +15,24 @@ int main(int ac, char **av)
 {
     GlobalConfig        configuration;
     std::vector<Server> servers;
-    //char conf[17] = "conf/config.conf";
+    char conf[17] = "conf/config.conf";
 
     if (ac == 2)
         configuration.ParseConfigFile(av[1]);
+    else
+        configuration.ParseConfigFile(conf);
+    for (size_t i = 0; i < configuration.GetServersVector().size(); i++)
+    {
+        Server  WebServer(configuration.GetServersVector()[i]);
+        WebServer.CreateServer();
+        WebServer.SelectSetsInit();
+        servers.push_back(WebServer);
+    }
 
-    std::cout << "First CGI ->  " << configuration.GetServersVector()[0].GetLocationsVec()[0].GetCgiInfoPhp().path << std::endl;
-    std::cout << "Second CGI -> " << configuration.GetServersVector()[0].GetLocationsVec()[0].GetCgiInfoPerl().path << std::endl;
-    // else
-    //     configuration.ParseConfigFile(conf);
-    // for (size_t i = 0; i < configuration.GetServersVector().size(); i++)
-    // {
-    //     Server  WebServer(configuration.GetServersVector()[i]);
-    //     WebServer.CreateServer();
-    //     WebServer.SelectSetsInit();
-    //     servers.push_back(WebServer);
-    // }
-
-    // while (TRUE)
-    // {
-    //     for (size_t i = 0; i < servers.size(); i++)
-    //     {
-    //         servers[i].Start();
-    //     }
-    // }
+    while (TRUE)
+    {
+        for (size_t i = 0; i < servers.size(); i++)
+            servers[i].Start();
+    }
     return (0);
 }

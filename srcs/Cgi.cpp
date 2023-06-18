@@ -93,7 +93,7 @@ char **Handler::CgiSetEnv(std::string method)
     return (newEnv);
 }
 
-int Handler::HandleCgi(std::string path, std::string method, int header_flag)
+int Handler::HandleCgi(std::string path, std::string method, int header_flag, cgi &cgitype)
 {
     static int var = 0;
     var++;
@@ -103,6 +103,8 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
     std::ofstream ParsedTmpOutFile;
     std::stringstream TmpOutFileStream;
     struct stat s;
+
+    std::cout << "Handle GGI -> " << cgitype.path << "\n";
 
     TmpOutFile.setf(std::ios::binary);
     if (stat(path.c_str(), &s) == 0 && (s.st_mode & S_IFREG))
@@ -120,7 +122,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
             this->_cgiTmpFileName = tmpfilename;
             
             //PHP Script child process
-            char *excearr[] = {const_cast<char *>(this->_workingLocation.GetCgiInfoPhp().path.c_str()), const_cast<char *>(path.c_str()), NULL};
+            char *excearr[] = {const_cast<char *>(cgitype.path.c_str()), const_cast<char *>(path.c_str()), NULL};
             pid_t CID = fork();
             if (CID == 0)
             {
@@ -129,14 +131,15 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
                 close(outFd);
                 execve(excearr[0], excearr, newEnv);
             }
-            wait(0);
             
+            waitpid(CID, 0, WNOHANG);
+           
             //Free env
             for (unsigned int i = 0; newEnv[i] != NULL; i++)
                 delete newEnv[i];
             delete newEnv;
             
-            //Parsing CGI header
+            //Reading tmp file
             TmpOutFile.open(this->_cgiTmpFileName.c_str());
             if (!TmpOutFile)
                 std::cout << "The file could not be opened properly\n";
@@ -175,7 +178,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
             {
                 perror("Error (Send : CGI Header) -> ");
                 close(this->_cgiTmpFilefd);
-                remove(tmpfilename.c_str());
+                //remove(tmpfilename.c_str());
                 return (0);
             }
         }
@@ -189,7 +192,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
             {
                 perror("Error : Send <CGI>  =>  ");
                 close(this->_cgiTmpFilefd);
-                remove(tmpfilename.c_str());
+                //remove(tmpfilename.c_str());
                 return (0);
             }
         }

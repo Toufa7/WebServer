@@ -125,7 +125,7 @@ void Server::Start()
         /* 
             ~ Socket is ready to write
         */
-        if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true && bytesreceived > 0)
+        if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
         {
             if (itb->_client_handler.Driver(requested_data, bytesreceived) == FAILURE)
             {
