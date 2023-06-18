@@ -120,7 +120,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag)
             this->_cgiTmpFileName = tmpfilename;
             
             //PHP Script child process
-            char *excearr[] = {const_cast<char *>(this->_workingLocation.GetCgiInfo().path.c_str()), const_cast<char *>(path.c_str()), NULL};
+            char *excearr[] = {const_cast<char *>(this->_workingLocation.GetCgiInfoPhp().path.c_str()), const_cast<char *>(path.c_str()), NULL};
             pid_t CID = fork();
             if (CID == 0)
             {

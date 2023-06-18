@@ -552,17 +552,17 @@ int Handler::HandleGet()
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 		if ((s.st_mode & S_IFREG) || (indexfileflag == 1))
 		{
-			if (this->_workingLocation.GetCgiInfo().path != "n/a")
+			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a")
 			{
 				// handle file cgi
 				std::cout << "index file cgi\n";
-				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type))
+				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPhp().type))
 				{
 					if (this->HandleCgi(_path, "GET", _headerflag) == 0)
 						return (0);
 				}
 			}
-			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
+			if (this->_workingLocation.GetCgiInfoPhp().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfoPhp().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
 			{
 				struct stat file;
 				if (this->_headerflag == 0)
