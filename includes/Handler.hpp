@@ -43,6 +43,7 @@ class Handler
 		std::string _method;
 		std::string _uri; // The Request-URI (Uniform Resource Identifier)
 		std::string _path;
+		std::string _postFilePath;
 		std::string _querystring;
 		std::string _chunkHex;
 		int			_chunkHexState;

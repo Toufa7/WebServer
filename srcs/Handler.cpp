@@ -5,7 +5,7 @@
 Handler::Handler()
 {
 	this->_postFileFd = -1;
-    this->_headerflag = 0;
+	this->_headerflag = 0;
 	this->_chunkSize = 0;
 	this->_postRecv = 0;
 	this->_chunkHexState = 0;
@@ -78,7 +78,7 @@ std::string Handler::GetRootLocation(std::string uri, std::string locationPath, 
 // Generate a response header from the recieved argements
 void Handler::SendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength)
 {
-	// 
+	//
 	std::stringstream header;
 
 	header << "HTTP/1.1 " << statusCode << " " << this->_shared.status_codes[statusCode] << "\r\n";
@@ -102,7 +102,7 @@ void Handler::SendResponseHeader(std::string statusCode, std::string fileExt, st
 
 std::string Handler::generateListDir(std::string statusCode, std::string ls)
 {
-	if (ls.empty() == 1)//if an error happened, check ls wether is empty or not
+	if (ls.empty() == 1) // if an error happened, check ls wether is empty or not
 	{
 		perror("Error : GenerateListDir  <Directory listing> ");
 		this->sendCodeResponse("500");
@@ -175,7 +175,7 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 	char *body;
 
 	std::string request = req;
-	size_t header_len = request.find("\r\n\r\n");				  // Find the end of the request header
+	size_t header_len = request.find("\r\n\r\n"); // Find the end of the request header
 	if (header_len == std::string::npos)
 	{
 		perror("Error : ParseRequstHeader <Finding end of request> ");
@@ -343,7 +343,6 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 		while (this->_chunkHexState == 0 && i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
 			i++;
 		// std::cerr << "i is: " << i << std::endl;
-		
 
 		if (i == bytesreceived && body[i - 1] == '\n')
 			this->_chunkHexState = 1;
@@ -353,17 +352,17 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 			for (; i < bytesreceived && body[i] != '\r'; i++)
 				this->_chunkHex.push_back(body[i]);
 			this->_chunkHexState = 1;
-		// std::cerr << "i is: " << i << std::endl;
+			// std::cerr << "i is: " << i << std::endl;
 			// std::cerr << "4: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 			if (i < bytesreceived && body[i] == '\r')
 			{
 				this->_chunkHexState = 2;
 				while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
 					i++;
-		// std::cerr << "i is: " << i << std::endl;
+				// std::cerr << "i is: " << i << std::endl;
 				if ((i < bytesreceived && (body[i] != '\r' || body[i] != '\n')) || (i == bytesreceived && body[i - 1] == '\n'))
 					this->_chunkHexState = 0;
-		// std::cerr << "i is: " << i << std::endl;
+				// std::cerr << "i is: " << i << std::endl;
 				// std::cerr << "5: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 			}
 		}
@@ -410,6 +409,7 @@ int Handler::HandlePost(char *body, int bytesreceived)
 {
 	std::string boundary;
 	std::string mimeType = "";
+	struct stat s;
 	// Save MIME type and boundary if it exist
 	if (this->_req_header.find("Content-Type") != this->_req_header.end())
 	{
@@ -427,9 +427,8 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	// Create a file stream for writing
 	if (this->_headerflag == 0)
 	{
-		struct stat s;
-		std::string fileName = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
-		this->_postFileFd = open(fileName.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0777);
+		_postFilePath = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
+		this->_postFileFd = open(_postFilePath.c_str(), O_CREAT | O_WRONLY | O_APPEND, 0777);
 		if (stat(_path.c_str(), &s) != 0)
 		{
 			this->sendCodeResponse("404");
@@ -441,6 +440,11 @@ int Handler::HandlePost(char *body, int bytesreceived)
 			return 0;
 		}
 	}
+	else if (access(_postFilePath.c_str(), F_OK) == -1 || access(_postFilePath.c_str(), W_OK) == -1 || access(_postFilePath.c_str(), R_OK) == -1)
+	{
+		this->sendCodeResponse("500");
+		return 0;
+	}
 
 	// if (!boundary.empty())
 	// {
@@ -448,7 +452,7 @@ int Handler::HandlePost(char *body, int bytesreceived)
 	// 	// std::cerr << "Post boundry\n";
 	// 	return 0;
 	// }
-	// else 
+	// else
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
 	{
 		return this->chunkedPost(body, bytesreceived);
@@ -491,10 +495,10 @@ int Handler::HandleGet()
 		{
 			if (_path[_path.size() - 1] != '/')
 				_path += '/';
-			
+
 			if (this->_workingLocation.GetIndexesVec().empty() == 0)
 			{
-				//case of valid index file so you shuold handle cgi or not
+				// case of valid index file so you shuold handle cgi or not
 				std::string indexfilepath;
 
 				indexfilepath = _path;
@@ -504,7 +508,7 @@ int Handler::HandleGet()
 			}
 			else
 			{
-				//case of no index file and should check autoindex
+				// case of no index file and should check autoindex
 				if (this->_workingLocation.GetAutoIndex() == 1)
 				{
 					DIR *DirPtr;
@@ -558,9 +562,7 @@ int Handler::HandleGet()
 						return (0);
 				}
 			}
-			if (this->_workingLocation.GetCgiInfo().path == "n/a" 
-				|| this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type
-				|| (indexfileflag == 1))//regular file, non valid cgi extension and index file present with cgi off
+			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
 			{
 				struct stat file;
 				if (this->_headerflag == 0)
@@ -600,12 +602,12 @@ int Handler::HandleGet()
 
 // -------------------------------- Delete method ----------------------
 
-int	Handler::DeleteDirectory(const char *path)
+int Handler::DeleteDirectory(const char *path)
 {
-	DIR				*directory;
-	struct dirent	*entry;
-	struct stat		file;
-	char 			subdir[256];
+	DIR *directory;
+	struct dirent *entry;
+	struct stat file;
+	char subdir[256];
 
 	if ((directory = opendir(path)) == NULL)
 	{
@@ -653,15 +655,15 @@ int Handler::HandleDelete()
 {
 	struct stat file;
 	std::string path;
-	
+
 	path = this->_path;
 	if (stat(path.c_str(), &file) == 0)
 	{
 		if (S_ISREG(file.st_mode))
 		{
 			/*
-				* Allowed Permissions
-			*/
+			 * Allowed Permissions
+			 */
 			if (S_ISREG(file.st_mode) && (file.st_mode & S_IWUSR))
 			{
 				DeleteFile(path.c_str());
@@ -682,8 +684,8 @@ int Handler::HandleDelete()
 			if (path[path.size() - 1] == '/')
 			{
 				/*
-					* Allowed Permissions
-				*/
+				 * Allowed Permissions
+				 */
 				if (S_ISDIR(file.st_mode) && (file.st_mode & S_IWUSR))
 				{
 					if (DeleteDirectory(path.c_str()) == 1)
