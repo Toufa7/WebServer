@@ -170,6 +170,8 @@ void Handler::sendCodeResponse(std::string statusCode)
 
 int Handler::parseRequestHeader(char *req, int bytesreceived)
 {
+	std::cerr << req << std::endl;
+	std::cerr << "-----------------------------------------\n";
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
@@ -461,8 +463,8 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		// std::cout << bytesreceived << " " << this->_postRecv << std::endl;
 		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
 		{
-			std::cerr << this->_workingLocation.GetCgiInfo().path << std::endl;
-			if (this->_workingLocation.GetCgiInfo().path != "n/a")
+			std::cerr << this->_workingLocation.GetCgiInfoPhp().path << std::endl;
+			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a")
 				this->postCgi();
 			this->sendCodeResponse("201");
 			close(this->_postFileFd);
@@ -547,22 +549,29 @@ int Handler::HandleGet()
 		/*--------------------------------------------- File Handler -------------------------------------------------*/
 		if ((s.st_mode & S_IFREG) || (indexfileflag == 1))
 		{
-			if (this->_workingLocation.GetCgiInfo().path != "n/a")
+			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a" || this->_workingLocation.GetCgiInfoPerl().path != "n/a")
 			{
 				// handle file cgi
-				std::cout << "index file cgi\n";
-				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfo().type))
+				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPhp().type))
 				{
-					rethis->HandleCgi(_path, "GET", _headerflag) == 0)
+					if (this->HandleCgi(_path, "GET", _headerflag, this->_workingLocation.GetCgiInfoPhp()) == 0)
+						return (0);
+				}
+				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPerl().type))
+				{
+					if (this->HandleCgi(_path, "GET", _headerflag, this->_workingLocation.GetCgiInfoPerl()) == 0)
 						return (0);
 				}
 			}
-			if (this->_workingLocation.GetCgiInfo().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfo().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
+			if (this->_workingLocation.GetCgiInfoPhp().path == "n/a" 
+				|| this->_workingLocation.GetCgiInfoPerl().path == "n/a" 
+				|| this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfoPhp().type 
+				|| (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
 			{
+				std::cout << "GET file handler" << "\n";
 				struct stat file;
 				if (this->_headerflag == 0)
 				{
-					std::cout << "Open\n";
 					std::string filext = this->_shared.fileExtention(_path);
 					requested_file = open(this->_path.c_str(), O_RDONLY);
 					if (requested_file < 0)

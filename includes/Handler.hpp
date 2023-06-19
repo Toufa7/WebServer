@@ -64,7 +64,7 @@ class Handler
 		int		HandleDelete();
 		int 	HandlePost(char *body, int bytesreceived);
 		int		chunkedPost(char *body, int bytesreceived);
-		int		HandleCgi(std::string path, std::string method, int header_flag);
+		int		HandleCgi(std::string path, std::string method, int header_flag, cgi &cgitype);
 		int		postCgi();
 		char	**CgiSetEnv(std::string method);
 		bool	ValidateRequest();

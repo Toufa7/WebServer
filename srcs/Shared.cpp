@@ -180,9 +180,6 @@ std::string Shared::generateFileName(const std::string& path, const std::string&
 	std::string fileName = path;
     const std::string characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
-    // Seed the random number generator
-    std::srand(static_cast<unsigned int>(std::time(0)));
-
     // Generate a random string for the file name
     for (int i = 0; i < 10; ++i)
         fileName += characters[std::rand() % characters.length()];

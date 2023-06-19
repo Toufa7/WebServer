@@ -13,6 +13,8 @@
 
 int main(int ac, char **av)
 {
+    // Seed the random number generator
+    std::srand(time(NULL));
     GlobalConfig        configuration;
     std::vector<Server> servers;
     char conf[17] = "conf/config.conf";
@@ -32,9 +34,7 @@ int main(int ac, char **av)
     while (TRUE)
     {
         for (size_t i = 0; i < servers.size(); i++)
-        {
             servers[i].Start();
-        }
     }
     return (0);
 }

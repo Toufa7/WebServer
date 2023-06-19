@@ -7,8 +7,11 @@ ServerLocation::ServerLocation()
     _RedirectionInfo.RedirectionCode = "n/a";
     _RedirectionInfo.RedirectionPath = "n/a";
 
-    _CgiInfo.type = "n/a";
-    _CgiInfo.path = "n/a";
+    _CgiInfoPhp.type = "n/a";
+    _CgiInfoPhp.path = "n/a";
+
+    _CgiInfoPerl.type = "n/a";
+    _CgiInfoPerl.path = "n/a";
 
     _LocationPath = "n/a";
     _AutoIndex = 0;
@@ -24,8 +27,10 @@ ServerLocation::ServerLocation(const ServerLocation & ServerObj)
 ServerLocation & ServerLocation::operator = (const ServerLocation & ServerObj)
 {
     this->_AutoIndex = ServerObj._AutoIndex;
-    this->_CgiInfo.path = ServerObj._CgiInfo.path;
-    this->_CgiInfo.type = ServerObj._CgiInfo.type;
+    this->_CgiInfoPhp.path = ServerObj._CgiInfoPhp.path;
+    this->_CgiInfoPhp.type = ServerObj._CgiInfoPhp.type;
+    this->_CgiInfoPerl.path = ServerObj._CgiInfoPerl.path;
+    this->_CgiInfoPerl.type = ServerObj._CgiInfoPerl.type;
     this->_RedirectionInfo.RedirectionFlag = ServerObj._RedirectionInfo.RedirectionFlag;
     this->_RedirectionInfo.RedirectionCode = ServerObj._RedirectionInfo.RedirectionCode;
     this->_RedirectionInfo.RedirectionPath = ServerObj._RedirectionInfo.RedirectionPath;
@@ -380,6 +385,9 @@ void    ServerConfig::ParseServerLocation(std::string location)
     /*----------------------------------- end find root -----------------------------------*/
     
    /*------------------------------------- find cgi -----------------------------------------*/
+   //PHP CGI
+    struct stat interpreterPhp;
+
     key_pos = location.find("cgi ");
     if (key_pos >= 0)
     {
@@ -390,13 +398,40 @@ void    ServerConfig::ParseServerLocation(std::string location)
         npos = tmp_str.find(" ", 1);
         if (npos < 0)
             InvalidConfigFile("Invalid config file : There was an error (Find CGI).");
-        location_tmp._CgiInfo.type = tmp_str.substr(0, npos);
+        location_tmp._CgiInfoPhp.type = tmp_str.substr(0, npos);
         npos = tmp_str.find(" ");
         if (npos < 0)
             InvalidConfigFile("Invalid config file : There was an error (Find CGI).");
-        location_tmp._CgiInfo.path = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
+        location_tmp._CgiInfoPhp.path = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
+        
+        if (stat(location_tmp._CgiInfoPhp.path.c_str(), &interpreterPhp) != 0)
+            InvalidConfigFile("Invalid config file : Invalid interpreter path (Find PHP CGI).");
+        
         tmp_str.erase();
-        //you should test cgi path
+    }
+
+    //Perl CGI
+    struct stat interpreterPerl;
+    key_pos = location.find("cgi ", key_pos + 1);
+    if (key_pos >= 0)
+    {
+        value_pos = location.find(";", key_pos + 1);
+        if (value_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error (Find CGI).");
+        tmp_str = location.substr((key_pos + 4), value_pos - (key_pos + 4));
+        npos = tmp_str.find(" ", 1);
+        if (npos < 0)
+            InvalidConfigFile("Invalid config file : There was an error (Find CGI).");
+        location_tmp._CgiInfoPerl.type = tmp_str.substr(0, npos);
+        npos = tmp_str.find(" ");
+        if (npos < 0)
+            InvalidConfigFile("Invalid config file : There was an error (Find CGI).");
+        location_tmp._CgiInfoPerl.path = tmp_str.substr(tmp_str.find(" ") + 1, value_pos - (tmp_str.find(" ") + 1));
+        
+        if (stat(location_tmp._CgiInfoPerl.path.c_str(), &interpreterPerl) != 0)
+            InvalidConfigFile("Invalid config file : Invalid interpreter path (Find PERL CGI).");
+        
+        tmp_str.erase();
     }
     /*----------------------------------- end of find cgi -----------------------------------*/
 
@@ -490,10 +525,10 @@ void    GlobalConfig::PrintServerConfig(unsigned int index)
             std::cout << "OFF";
         std::cout << "\n";
 
-        if (_LocationsVec[index].GetCgiInfo().type != "n/a")
+        if (_LocationsVec[index].GetCgiInfoPhp().type != "n/a")
         {
-            std::cout << "Location cgi type         : " << _LocationsVec[index].GetCgiInfo().type << "\n";
-            std::cout << "Location cgi path         : " << _LocationsVec[index].GetCgiInfo().path << "\n";
+            std::cout << "Location cgi type         : " << _LocationsVec[index].GetCgiInfoPhp().type << "\n";
+            std::cout << "Location cgi path         : " << _LocationsVec[index].GetCgiInfoPhp().path << "\n";
         }
 
         if (_LocationsVec[index].GetUpload() != "n/a")
@@ -579,9 +614,14 @@ int ServerLocation::GetAutoIndex(void)
     return (_AutoIndex);
 }
 
-cgi& ServerLocation::GetCgiInfo(void)
+cgi& ServerLocation::GetCgiInfoPhp(void)
 {
-    return (_CgiInfo);
+    return (_CgiInfoPhp);
+}
+
+cgi& ServerLocation::GetCgiInfoPerl(void)
+{
+    return (_CgiInfoPerl);
 }
 
 std::string ServerLocation::GetLocationPath(void)

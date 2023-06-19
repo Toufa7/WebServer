@@ -32,7 +32,8 @@ class ServerLocation
 {
     protected:
         int                         _AutoIndex;
-        cgi                         _CgiInfo;
+        cgi                         _CgiInfoPhp;
+        cgi                         _CgiInfoPerl;
         redirection                 _RedirectionInfo;
         std::string                 _LocationPath;
         std::string                 _Root;
@@ -45,7 +46,8 @@ class ServerLocation
         ServerLocation(const ServerLocation & ServerObj);
         ServerLocation & operator = (const ServerLocation & ServerObj);
         int                         GetAutoIndex(void);
-        cgi&                        GetCgiInfo(void);
+        cgi&                        GetCgiInfoPhp(void);
+        cgi&                        GetCgiInfoPerl(void);
         redirection&                GetRedirectionInfo(void);
         std::string                 GetLocationPath(void);
         std::string                 GetRoot(void);
