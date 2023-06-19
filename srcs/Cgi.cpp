@@ -114,7 +114,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
         {
             char **newEnv = CgiSetEnv(method); 
             tmpfilename = "tmpfiles/";
-            tmpfilename = this->_shared.generateFileName("tmpfiles/", ".tmp");
+            tmpfilename = this->_shared.generateFileName("/tmp/", ".tmp");
             outFd = open(tmpfilename.c_str(), O_CREAT | O_RDWR | O_TRUNC , 0777);
             if (outFd < 0)
             {
@@ -184,7 +184,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             {
                 perror("Error (Send : CGI Header) -> ");
                 close(this->_cgiTmpFilefd);
-                //remove(tmpfilename.c_str());
+                remove(tmpfilename.c_str());
                 return (0);
             }
         }
@@ -198,7 +198,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             {
                 perror("Error : Send <CGI>  =>  ");
                 close(this->_cgiTmpFilefd);
-                //remove(tmpfilename.c_str());
+                remove(tmpfilename.c_str());
                 return (0);
             }
         }
@@ -211,15 +211,3 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
     return (1);
 
 }
-
-
-
-// SERVER_PROTOCOL=HTTP/1.1
-// REDIRECT_STATUS=200
-// GATEWAY_INTERFACE=CGI/1.1
-// SCRIPT_NAME=
-// SCRIPT_FILENAME=
-// PATH_INFO=
-// QUERY_STRING=
-// REQUEST_METHOD=
-// HTTP_COOKIE=" + client.parsedRequest.getValueFromMap("Cookie"))
