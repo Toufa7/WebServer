@@ -117,7 +117,10 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             tmpfilename = this->_shared.generateFileName("tmpfiles/", ".tmp");
             outFd = open(tmpfilename.c_str(), O_CREAT | O_RDWR | O_TRUNC , 0777);
             if (outFd < 0)
+            {
                 this->sendCodeResponse("500");
+                return (0);
+            }
             //this may cause back and forth calling if you add return
             this->_cgiTmpFileName = tmpfilename;
             
@@ -132,7 +135,10 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
                 execve(excearr[0], excearr, newEnv);
             }
             
-            waitpid(CID, 0, WNOHANG);
+            std::cout << "1\n";
+            wait(0);
+            std::cout << "2\n";
+
            
             //Free env
             for (unsigned int i = 0; newEnv[i] != NULL; i++)
@@ -155,7 +161,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             TmpOutFileStream << CgiHeaderFindStatus(Header);
             TmpOutFileStream << Header;
 
-            BodyPos = Buf.find("<!DOCTYPE html>");
+            BodyPos = Buf.find("<!DOCTYPE html");
             if (BodyPos > 0)
             {
                 Body = Buf.substr(BodyPos, (Buf.length() - BodyPos));        
@@ -198,8 +204,12 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
         }
     }
     else
+    {
         this->sendCodeResponse("404");
+        return (0);
+    }
     return (1);
+
 }
 
 

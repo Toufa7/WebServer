@@ -1,0 +1,22 @@
+HTTP/1.1 200 OK
+X-Powered-By: PHP/8.0.2
+Set-Cookie: PHPSESSID=9173f5f4cedab76a2c992bc01778463a; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-type: text/html; charset=UTF-8Content-Length: 242
+
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Increment Counter Example</title>
+</head>
+<body>
+    <h1>Counter: 0</h1>
+    <form method="POST">
+        <button type="submit" name="increment">Increment Counter</button>
+    </form>
+</body>
+</html>
+

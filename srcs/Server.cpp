@@ -127,7 +127,7 @@ void Server::Start()
         // std::cout << "Activiy On Write -> " << FD_ISSET(active_clt, &tmpfdswrite) << std::endl;
         if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
         {
-            if (itb->_client_handler.Driver(requested_data, bytesreceived) == DONE)
+            if (itb->_client_handler.Driver(requested_data, bytesreceived) == 0)
             {
                 DropClient();
                 continue;
