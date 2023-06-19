@@ -184,7 +184,7 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 		this->sendCodeResponse("500");
 	}
 	std::string header = request.substr(0, header_len);			  // Save the header
-	body = req + header_len + 2, bytesreceived -= header_len + 2; // Save the body
+	body = req + header_len + 4, bytesreceived -= header_len + 4; // Save the body
 	std::stringstream request_stream(header);
 
 	request_stream >> std::skipws >> std::ws >> this->_method; // Streaming methode into _methode while taking care of white spaces
@@ -464,11 +464,17 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
 		{
 			std::cerr << this->_workingLocation.GetCgiInfoPhp().path << std::endl;
-			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a")
-				this->postCgi();
+			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a" || this->_workingLocation.GetCgiInfoPerl().path != "n/a")
+			{
+				if ((this->_shared.file_extensions[mimeType] == this->_workingLocation.GetCgiInfoPhp().type) || !boundary.empty())
+					this->postCgi(this->_workingLocation.GetCgiInfoPhp(), !boundary.empty());
+
+				else if ((this->_shared.file_extensions[mimeType] == this->_workingLocation.GetCgiInfoPerl().type) || !boundary.empty())
+					this->postCgi(this->_workingLocation.GetCgiInfoPerl(), !boundary.empty());
+			}
 			this->sendCodeResponse("201");
 			close(this->_postFileFd);
-			// std::remove(this->_postFilePath.c_str());
+			std::remove(this->_postFilePath.c_str());
 			return 0;
 		}
 	}

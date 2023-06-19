@@ -65,7 +65,7 @@ class Handler
 		int 	HandlePost(char *body, int bytesreceived);
 		int		chunkedPost(char *body, int bytesreceived);
 		int		HandleCgi(std::string path, std::string method, int header_flag, cgi &cgitype);
-		int		postCgi();
+		int		postCgi(cgi &cgiInfo, bool isBoundary);
 		char	**CgiSetEnv(std::string method);
 		bool	ValidateRequest();
 		bool	MatchLocation();

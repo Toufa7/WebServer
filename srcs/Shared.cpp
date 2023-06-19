@@ -59,7 +59,8 @@ Shared::Shared()
 	this->file_extensions["application/x-font-opentype"] = ".otf";
 	this->file_extensions["application/vnd.ms-fontobject"] = ".eot";
 	this->file_extensions["application/octet-stream"] = ".bin";
-	this->file_extensions[""] = "";
+	this->file_extensions["application/x-perl"] = ".pl";
+	this->file_extensions["application/x-httpd-php"] = ".php";
 
 	// MIME Types
 	this->mime_types[".html"]	= "text/html";
@@ -109,6 +110,7 @@ Shared::Shared()
 	this->mime_types[".eot"]	= "application/vnd.ms-fontobject";
 	this->mime_types[".bin"]	= "application/octet-stream";
 	this->mime_types[".php"]	= "application/x-httpd-php";
+	this->mime_types[".pl"]		= "application/x-perl";
 
 	// Status codes
 	this->status_codes["100"] = "Continue";

@@ -96,22 +96,38 @@ char **Handler::CgiSetEnv(std::string method)
     return (newEnv);
 }
 
-int Handler::postCgi()
+int Handler::postCgi(cgi &cgiInfo, bool isBoundary)
 {
     std::cerr << "post cgi \n";
+    std::string scriptPath = _postFilePath;
+
+    if (isBoundary && cgiInfo.type == ".php")
+        scriptPath = "/Users/abouchfa/Desktop/Webserv/bin/script.php";
+
+    std::string outFilePath = this->_shared.generateFileName(this->_path, "");
+	int outFilefd = open(outFilePath.c_str(), O_CREAT | O_RDWR | O_APPEND, 0777);
 
     char **newEnv = CgiSetEnv("POST");
 
+    std::cout << scriptPath << std::endl;
+    std::cout << cgiInfo.path << std::endl;
     // PHP Script child process
-    char *excearr[] = {const_cast<char *>(this->_workingLocation.GetCgiInfoPhp().path.c_str()), const_cast<char *>(this->_path.c_str()), NULL};
+    char *excearr[] = {const_cast<char *>(cgiInfo.path.c_str()), const_cast<char *>(scriptPath.c_str()), NULL};
     pid_t pid = fork();
     if (pid == 0)
     {
-        dup2(this->_postFileFd, 0);
-        close(this->_postFileFd);
+        if (isBoundary)
+        {
+            dup2(this->_postFileFd, 0);
+            close(this->_postFileFd);
+        }
+        dup2(outFilefd, 1);
+        close(outFilefd);
+
         execve(excearr[0], excearr, newEnv);
     }
-    waitpid(pid, 0, WNOHANG);
+    wait(0);
+    close(outFilefd);
     //Free env
     for (unsigned int i = 0; newEnv[i] != NULL; i++)
         delete newEnv[i];
@@ -157,7 +173,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
                 execve(excearr[0], excearr, newEnv);
             }
             
-            waitpid(CID, 0, WNOHANG);
+            wait(0);
            
             //Free env
             for (unsigned int i = 0; newEnv[i] != NULL; i++)
