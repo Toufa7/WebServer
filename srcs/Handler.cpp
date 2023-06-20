@@ -170,8 +170,6 @@ void Handler::sendCodeResponse(std::string statusCode)
 
 int Handler::parseRequestHeader(char *req, int bytesreceived)
 {
-	std::cerr << req << std::endl;
-	std::cerr << "-----------------------------------------\n";
 	int delimiter_position;
 	std::string current_line, key, value;
 	char *body;
@@ -197,7 +195,14 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 		delimiter_position = current_line.find(':');
 		key = current_line.substr(0, delimiter_position);
 		value = current_line.substr(delimiter_position + 2, current_line.length()); // [delimiter_position + 2] to remove the extra space before value
-		this->_req_header[key] = value;												// storing key and value in map
+		// storing key and value in map
+		this->_req_header[key] = value;
+		if (key == "Content-Type" && value.find(";") != std::string::npos)
+		{
+			if (value.find("=-") != std::string::npos)
+				this->_req_header["boundary"] = "--" + value.substr(value.find("=-") + 1, value.length());
+			this->_req_header["Content-Type"] = value.substr(0, value.find(";"));
+		}
 	}
 
 	if (!this->ValidateRequest())
@@ -322,7 +327,6 @@ bool Handler::ValidateURI(const std::string &uri)
 
 int Handler::chunkedPost(char *body, int bytesreceived)
 {
-	//  Update chunk size
 	// _chunkHexStates:
 	// 0: Still in the \r\n before the hex
 	// 1: in the hex number
@@ -370,18 +374,16 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 		}
 		// std::cerr << "6: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 		// std::cerr << "i is: " << i << std::endl;
+		if (this->_chunkHex == "0")
+			return 0;
+		
 		if (this->_chunkHexState == 1)
 			return 1;
 
 		std::stringstream ss;
 		ss << std::hex << this->_chunkHex;
 		ss >> this->_chunkSize;
-		if (this->_chunkHex == "0" || this->_chunkSize <= 0)
-		{
-			this->sendCodeResponse("201");
-			close(this->_postFileFd);
-			return 0;
-		}
+
 		this->_chunkHex.clear();
 		if (bytesreceived - i <= 0)
 			return 1;
@@ -409,29 +411,40 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 
 int Handler::HandlePost(char *body, int bytesreceived)
 {
-	std::string boundary;
 	std::string mimeType = "";
 	struct stat s;
+	int returnVal = 1;
+
+
 	// Save MIME type and boundary if it exist
 	if (this->_req_header.find("Content-Type") != this->_req_header.end())
-	{
-		int semiPos = this->_req_header["Content-Type"].find(';');
-		if (semiPos != -1)
-		{
-			mimeType = this->_req_header["Content-Type"].substr(0, semiPos);
-			if (mimeType == "multipart/form-data")
-				boundary = this->_req_header["Content-Type"].substr(semiPos + 11, this->_req_header["Content-Type"].length());
-		}
-		else
-			mimeType = this->_req_header["Content-Type"];
-	}
+		mimeType = this->_req_header["Content-Type"];
 
 	// Create a file stream for writing
 	if (this->_headerflag == 0)
 	{
-		_postFilePath = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
-		this->_postFileFd = open(_postFilePath.c_str(), O_CREAT | O_RDWR | O_APPEND, 0777);
-		if (stat(_path.c_str(), &s) != 0)
+		stat(this->_path.c_str(), &s);
+		if (S_ISDIR(s.st_mode))
+		{
+			_postFilePath = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
+			this->_postFileFd = open(_postFilePath.c_str(), O_CREAT | O_RDWR | O_APPEND, 0777);
+		}
+		else
+		{
+			std::string fileExt = this->_shared.fileExtention(this->_path);
+			if ((this->_workingLocation.GetCgiInfoPhp().path != "n/a" && this->_workingLocation.GetCgiInfoPhp().type == fileExt) ||
+				(this->_workingLocation.GetCgiInfoPerl().path != "n/a" && this->_workingLocation.GetCgiInfoPerl().type == fileExt))
+				{
+					_postFilePath = this->_shared.generateFileName("/tmp/", this->_shared.file_extensions[mimeType]);
+					this->_postFileFd = open(_postFilePath.c_str(), O_CREAT | O_RDWR | O_APPEND, 0777);
+				}
+				else
+				{
+					this->sendCodeResponse("403");
+					return 0;
+				}
+		}
+		if (stat(this->_postFilePath.c_str(), &s) != 0)
 		{
 			this->sendCodeResponse("404");
 			return 0;
@@ -448,8 +461,9 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		return 0;
 	}
 
+
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
-		return this->chunkedPost(body, bytesreceived);
+		returnVal = this->chunkedPost(body, bytesreceived);
 	else
 	{
 		long long remmining = std::stoll(this->_req_header["Content-Length"]) - this->_postRecv;
@@ -462,23 +476,25 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		this->_postRecv += bytesreceived;
 		// std::cout << bytesreceived << " " << this->_postRecv << std::endl;
 		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
-		{
-			std::cerr << this->_workingLocation.GetCgiInfoPhp().path << std::endl;
-			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a" || this->_workingLocation.GetCgiInfoPerl().path != "n/a")
-			{
-				if ((this->_shared.file_extensions[mimeType] == this->_workingLocation.GetCgiInfoPhp().type) || !boundary.empty())
-					this->postCgi(this->_workingLocation.GetCgiInfoPhp(), !boundary.empty());
-
-				else if ((this->_shared.file_extensions[mimeType] == this->_workingLocation.GetCgiInfoPerl().type) || !boundary.empty())
-					this->postCgi(this->_workingLocation.GetCgiInfoPerl(), !boundary.empty());
-			}
-			this->sendCodeResponse("201");
-			close(this->_postFileFd);
-			std::remove(this->_postFilePath.c_str());
-			return 0;
-		}
+			returnVal = 0;
 	}
-	return 1;
+	
+	if (!returnVal)
+	{
+		stat(this->_path.c_str(), &s);
+		if (!S_ISDIR(s.st_mode))
+		{
+			std::string fileExt = this->_shared.fileExtention(this->_path);
+			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a" && this->_workingLocation.GetCgiInfoPhp().type == fileExt)
+				this->HandleCgi(_path, "POST", 0, this->_workingLocation.GetCgiInfoPhp());
+			else if (this->_workingLocation.GetCgiInfoPerl().path != "n/a" && this->_workingLocation.GetCgiInfoPerl().type == fileExt)
+				this->HandleCgi(_path, "POST", 0, this->_workingLocation.GetCgiInfoPerl());
+		}
+		else
+			this->sendCodeResponse("201");
+		close(this->_postFileFd);
+	}
+	return returnVal;
 }
 
 // -------------------------------- GET method ----------------------
@@ -569,12 +585,10 @@ int Handler::HandleGet()
 						return (0);
 				}
 			}
-			if (this->_workingLocation.GetCgiInfoPhp().path == "n/a" 
-				|| this->_workingLocation.GetCgiInfoPerl().path == "n/a" 
-				|| this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfoPhp().type 
-				|| (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
+			if (this->_workingLocation.GetCgiInfoPhp().path == "n/a" || this->_workingLocation.GetCgiInfoPerl().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfoPhp().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
 			{
-				std::cout << "GET file handler" << "\n";
+				std::cout << "GET file handler"
+						  << "\n";
 				struct stat file;
 				if (this->_headerflag == 0)
 				{

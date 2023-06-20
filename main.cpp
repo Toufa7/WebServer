@@ -15,6 +15,7 @@ int main(int ac, char **av)
 {
     // Seed the random number generator
     std::srand(time(NULL));
+    
     GlobalConfig        configuration;
     std::vector<Server> servers;
     char conf[17] = "conf/config.conf";

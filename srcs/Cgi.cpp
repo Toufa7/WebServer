@@ -51,6 +51,7 @@ std::string CgiBodySize(int BodySize)
 
 char **Handler::CgiSetEnv(std::string method)
 {
+    // std::cout << this->_path << std::endl;
     std::string SERVER_PROTOCOL = "SERVER_PROTOCOL=HTTP/1.1",
                 REDIRECT_STATUS = "REDIRECT_STATUS=200",
                 GATEWAY_INTERFACE = "GATEWAY_INTERFACE=CGI/1.1",
@@ -72,7 +73,7 @@ char **Handler::CgiSetEnv(std::string method)
 
     if (!this->_querystring.empty())
         QUERY_STRING += this->_querystring;
-    char **newEnv = new char*[9];
+    char **newEnv = new char*[11];
 
     newEnv[0] = new char[SERVER_PROTOCOL.length()];
     newEnv[1] = new char[REDIRECT_STATUS.length()];
@@ -82,6 +83,8 @@ char **Handler::CgiSetEnv(std::string method)
     newEnv[5] = new char[SCRIPT_FILENAME.length()];
     newEnv[6] = new char[PATH_INFO.length()];
     newEnv[7] = new char[QUERY_STRING.length()];
+    newEnv[8] = new char[CONTENT_TYPE.length()];
+    newEnv[9] = new char[CONTENT_LENGTH.length()];
 
     memcpy(newEnv[0], SERVER_PROTOCOL.c_str(), SERVER_PROTOCOL.length());
     memcpy(newEnv[1], REDIRECT_STATUS.c_str(), REDIRECT_STATUS.length());
@@ -91,43 +94,38 @@ char **Handler::CgiSetEnv(std::string method)
     memcpy(newEnv[5], SCRIPT_FILENAME.c_str(), SCRIPT_FILENAME.length());
     memcpy(newEnv[6], PATH_INFO.c_str(), PATH_INFO.length());
     memcpy(newEnv[7], QUERY_STRING.c_str(), QUERY_STRING.length());
-    newEnv[8] = NULL;
+    memcpy(newEnv[8], CONTENT_TYPE.c_str(), CONTENT_TYPE.length());
+    memcpy(newEnv[9], CONTENT_LENGTH.c_str(), CONTENT_LENGTH.length());
+    newEnv[10] = NULL;
 
     return (newEnv);
 }
 
-int Handler::postCgi(cgi &cgiInfo, bool isBoundary)
+int Handler::postCgi(cgi &cgiInfo)
 {
     std::cerr << "post cgi \n";
-    std::string scriptPath = _postFilePath;
-
-    if (isBoundary && cgiInfo.type == ".php")
-        scriptPath = "/Users/abouchfa/Desktop/Webserv/bin/script.php";
 
     std::string outFilePath = this->_shared.generateFileName(this->_path, "");
 	int outFilefd = open(outFilePath.c_str(), O_CREAT | O_RDWR | O_APPEND, 0777);
 
+    this->_path = this->_postFilePath;
     char **newEnv = CgiSetEnv("POST");
 
-    std::cout << scriptPath << std::endl;
-    std::cout << cgiInfo.path << std::endl;
     // PHP Script child process
-    char *excearr[] = {const_cast<char *>(cgiInfo.path.c_str()), const_cast<char *>(scriptPath.c_str()), NULL};
+    char *excearr[] = {const_cast<char *>(cgiInfo.path.c_str()), const_cast<char *>(this->_postFilePath.c_str()), NULL};
     pid_t pid = fork();
     if (pid == 0)
     {
-        if (isBoundary)
-        {
-            dup2(this->_postFileFd, 0);
-            close(this->_postFileFd);
-        }
         dup2(outFilefd, 1);
         close(outFilefd);
 
         execve(excearr[0], excearr, newEnv);
     }
+    std::cout << "1\n";
     wait(0);
+    std::cout << "2\n";
     close(outFilefd);
+    std::remove(this->_postFilePath.c_str());
     //Free env
     for (unsigned int i = 0; newEnv[i] != NULL; i++)
         delete newEnv[i];
@@ -155,11 +153,13 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
         if (header_flag == 0)
         {
             char **newEnv = CgiSetEnv(method); 
-            tmpfilename = "tmpfiles/";
-            tmpfilename = this->_shared.generateFileName("tmpfiles/", ".tmp");
+            tmpfilename = this->_shared.generateFileName("upload/", ".tmp");
             outFd = open(tmpfilename.c_str(), O_CREAT | O_RDWR | O_TRUNC , 0777);
             if (outFd < 0)
+            {
                 this->sendCodeResponse("500");
+                return (0);
+            }
             //this may cause back and forth calling if you add return
             this->_cgiTmpFileName = tmpfilename;
             
@@ -168,12 +168,20 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             pid_t CID = fork();
             if (CID == 0)
             {
+                if (method == "POST")
+                {
+                    dup2(this->_postFileFd, 0);
+                    close(this->_postFileFd);
+                }
                 dup2(outFd, 1);
                 close(outFd);
                 execve(excearr[0], excearr, newEnv);
             }
             
+            std::cout << "1\n";
             wait(0);
+            std::cout << "2\n";
+
            
             //Free env
             for (unsigned int i = 0; newEnv[i] != NULL; i++)
@@ -196,7 +204,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             TmpOutFileStream << CgiHeaderFindStatus(Header);
             TmpOutFileStream << Header;
 
-            BodyPos = Buf.find("<!DOCTYPE html>");
+            BodyPos = Buf.find("<!DOCTYPE html");
             if (BodyPos > 0)
             {
                 Body = Buf.substr(BodyPos, (Buf.length() - BodyPos));        
@@ -210,6 +218,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
                 ParsedTmpOutFile << Body;
             ParsedTmpOutFile.close();
     
+            
             this->_cgiTmpFilefd = open(this->_cgiTmpFileName.c_str(), O_RDONLY , 0777);
             bytesread = read(this->_cgiTmpFilefd, buffer, sizeof(buffer));
             if (bytesread == -1)
@@ -219,7 +228,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             {
                 perror("Error (Send : CGI Header) -> ");
                 close(this->_cgiTmpFilefd);
-                //remove(tmpfilename.c_str());
+                remove(tmpfilename.c_str());
                 return (0);
             }
         }
@@ -233,24 +242,15 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             {
                 perror("Error : Send <CGI>  =>  ");
                 close(this->_cgiTmpFilefd);
-                //remove(tmpfilename.c_str());
+                remove(tmpfilename.c_str());
                 return (0);
             }
         }
     }
     else
+    {
         this->sendCodeResponse("404");
+        return (0);
+    }
     return (1);
 }
-
-
-
-// SERVER_PROTOCOL=HTTP/1.1
-// REDIRECT_STATUS=200
-// GATEWAY_INTERFACE=CGI/1.1
-// SCRIPT_NAME=
-// SCRIPT_FILENAME=
-// PATH_INFO=
-// QUERY_STRING=
-// REQUEST_METHOD=
-// HTTP_COOKIE=" + client.parsedRequest.getValueFromMap("Cookie"))
