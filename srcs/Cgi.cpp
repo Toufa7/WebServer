@@ -58,6 +58,7 @@ char **Handler::CgiSetEnv(std::string method)
                 REQUEST_METHOD = "REQUEST_METHOD=",
                 SCRIPT_FILENAME = "SCRIPT_FILENAME=",
                 PATH_INFO = "PATH_INFO=",
+                HTTP_COOKIE= "HTTP_COOKIE=",
                 QUERY_STRING = "QUERY_STRING=";
                 //For Post only
                 //CONTENT_TYPE = "CONTENT_TYPE=",
@@ -67,9 +68,15 @@ char **Handler::CgiSetEnv(std::string method)
     SCRIPT_NAME += this->_path.substr(_path.find_last_of('/', 0), _path.length());
     PATH_INFO += this->_path;
 
+	std::map<std::string, std::string>::iterator cookie = this->_req_header.find("Cookie");
+	if (cookie != this->_req_header.end())
+        HTTP_COOKIE += cookie->second;
+
+    std::cout << "Cooki e -> " << cookie->second << std::endl;
     if (!this->_querystring.empty())
         QUERY_STRING += this->_querystring;
-    char **newEnv = new char*[9];
+
+    char **newEnv = new char*[10];
 
     newEnv[0] = new char[SERVER_PROTOCOL.length()];
     newEnv[1] = new char[REDIRECT_STATUS.length()];
@@ -79,6 +86,8 @@ char **Handler::CgiSetEnv(std::string method)
     newEnv[5] = new char[SCRIPT_FILENAME.length()];
     newEnv[6] = new char[PATH_INFO.length()];
     newEnv[7] = new char[QUERY_STRING.length()];
+    newEnv[8] = new char[HTTP_COOKIE.length()];
+
 
     memcpy(newEnv[0], SERVER_PROTOCOL.c_str(), SERVER_PROTOCOL.length());
     memcpy(newEnv[1], REDIRECT_STATUS.c_str(), REDIRECT_STATUS.length());
@@ -88,7 +97,8 @@ char **Handler::CgiSetEnv(std::string method)
     memcpy(newEnv[5], SCRIPT_FILENAME.c_str(), SCRIPT_FILENAME.length());
     memcpy(newEnv[6], PATH_INFO.c_str(), PATH_INFO.length());
     memcpy(newEnv[7], QUERY_STRING.c_str(), QUERY_STRING.length());
-    newEnv[8] = NULL;
+    memcpy(newEnv[8], HTTP_COOKIE.c_str(), HTTP_COOKIE.length());
+    newEnv[9] = NULL;
 
     return (newEnv);
 }
@@ -134,12 +144,8 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
                 close(outFd);
                 execve(excearr[0], excearr, newEnv);
             }
-            
-            std::cout << "1\n";
             wait(0);
-            std::cout << "2\n";
 
-           
             //Free env
             for (unsigned int i = 0; newEnv[i] != NULL; i++)
                 delete newEnv[i];
@@ -160,6 +166,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             Header = Buf.substr(0, Buf.find("\r\n\r\n"));
             TmpOutFileStream << CgiHeaderFindStatus(Header);
             TmpOutFileStream << Header;
+            std::cout << "CGI HEader => "  << Header << std::endl;
 
             BodyPos = Buf.find("<!DOCTYPE html");
             if (BodyPos > 0)
