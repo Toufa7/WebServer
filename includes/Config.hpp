@@ -32,12 +32,13 @@ class ServerLocation
 {
     protected:
         int                         _AutoIndex;
+        int                         _Upload;
         cgi                         _CgiInfoPhp;
         cgi                         _CgiInfoPerl;
         redirection                 _RedirectionInfo;
         std::string                 _LocationPath;
         std::string                 _Root;
-        std::string                 _Upload;
+        // std::string                 _Upload;
         std::vector<std::string>    _AllowedMethodsVec;
         std::vector<std::string>    _IndexesVec;
     public:
@@ -46,12 +47,13 @@ class ServerLocation
         ServerLocation(const ServerLocation & ServerObj);
         ServerLocation & operator = (const ServerLocation & ServerObj);
         int                         GetAutoIndex(void);
+        int                         GetUpload(void);
         cgi&                        GetCgiInfoPhp(void);
         cgi&                        GetCgiInfoPerl(void);
         redirection&                GetRedirectionInfo(void);
         std::string                 GetLocationPath(void);
         std::string                 GetRoot(void);
-        std::string                 GetUpload(void);
+        //std::string                 GetUpload(void);
         std::vector<std::string>    GetAllowedMethodsVec(void);
         std::vector<std::string>    GetIndexesVec(void);
 };

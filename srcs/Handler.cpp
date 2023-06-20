@@ -60,6 +60,7 @@ void Handler::printRequstData()
 	{
 		std::cout << it->first << ": |" << it->second << "|\n";
 	}
+	std::cout << "----------------- end of Header ---------------------\n\n";
 }
 
 std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
@@ -204,6 +205,8 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 			this->_req_header["Content-Type"] = value.substr(0, value.find(";"));
 		}
 	}
+	
+	this->printRequstData();
 
 	if (!this->ValidateRequest())
 		return 0;

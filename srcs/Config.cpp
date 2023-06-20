@@ -16,7 +16,7 @@ ServerLocation::ServerLocation()
     _LocationPath = "n/a";
     _AutoIndex = 0;
     _Root = "n/a";
-    _Upload = "n/a";   
+    _Upload = 0;   
 }
 
 ServerLocation::ServerLocation(const ServerLocation & ServerObj)
@@ -370,6 +370,22 @@ void    ServerConfig::ParseServerLocation(std::string location)
         InvalidConfigFile("Invalid config file : auto index not found (Find autoindex).");
     /*------------------------------------- End of auto index -------------------------------------*/
 
+        /*------------------------------------------ upload ----------------------------------------*/
+    key_pos = location.find("upload ");
+    if (key_pos > 0)
+    {
+        value_pos = location.find(";", key_pos + 1);
+        if (value_pos < 0)
+            InvalidConfigFile("Invalid config file : There was an error (Find upload).");
+        tmp_str = location.substr((key_pos + 7), value_pos - (key_pos + 7));
+        if (tmp_str.find("on") != std::string::npos)
+            location_tmp._Upload = 1;
+        tmp_str.erase();
+    }
+    else
+        InvalidConfigFile("Invalid config file : auto index not found (Find upload).");
+    /*------------------------------------- upload index -------------------------------------*/
+
     /*------------------------------------- find root -------------------------------------*/
     key_pos = location.find("root ");
     if (key_pos >= 0)
@@ -531,8 +547,8 @@ void    GlobalConfig::PrintServerConfig(unsigned int index)
             std::cout << "Location cgi path         : " << _LocationsVec[index].GetCgiInfoPhp().path << "\n";
         }
 
-        if (_LocationsVec[index].GetUpload() != "n/a")
-            std::cout << "server _Upload         : " << _LocationsVec[index].GetUpload() << "\n";
+        // if (_LocationsVec[index].GetUpload() != "n/a")
+        //     std::cout << "server _Upload         : " << _LocationsVec[index].GetUpload() << "\n";
         
         if (_LocationsVec[index].GetAllowedMethodsVec().size() > 0)
         {
@@ -614,6 +630,11 @@ int ServerLocation::GetAutoIndex(void)
     return (_AutoIndex);
 }
 
+int ServerLocation::GetUpload(void)
+{
+    return (_Upload);
+}
+
 cgi& ServerLocation::GetCgiInfoPhp(void)
 {
     return (_CgiInfoPhp);
@@ -634,10 +655,10 @@ std::string ServerLocation::GetRoot(void)
     return (_Root);
 }
 
-std::string ServerLocation::GetUpload(void)
-{
-    return (_Upload);
-}
+// std::string ServerLocation::GetUpload(void)
+// {
+//     return (_Upload);
+// }
 
 std::vector<std::string> ServerLocation::GetAllowedMethodsVec(void)
 {

@@ -59,9 +59,10 @@ char **Handler::CgiSetEnv(std::string method)
                 REQUEST_METHOD = "REQUEST_METHOD=",
                 SCRIPT_FILENAME = "SCRIPT_FILENAME=",
                 PATH_INFO = "PATH_INFO=",
-                QUERY_STRING = "QUERY_STRING=",
                 CONTENT_TYPE = "CONTENT_TYPE=",
-                CONTENT_LENGTH = "CONTENT_LENGTH=";
+                CONTENT_LENGTH = "CONTENT_LENGTH=",
+                HTTP_COOKIE= "HTTP_COOKIE=",
+                QUERY_STRING = "QUERY_STRING=";
     REQUEST_METHOD += method;
     SCRIPT_FILENAME += this->_path.substr(_path.find_last_of('/', 0), _path.length());
     SCRIPT_NAME += this->_path.substr(_path.find_last_of('/', 0), _path.length());
@@ -71,9 +72,14 @@ char **Handler::CgiSetEnv(std::string method)
     if (this->_req_header.find("Content-Type") != this->_req_header.end())
         CONTENT_TYPE += this->_req_header["Content-Type"];
 
+	if (this->_req_header.find("Cookie") != this->_req_header.end())
+        HTTP_COOKIE += this->_req_header["Cookie"];
+
+    std::cout << "Cooki e -> " << HTTP_COOKIE << std::endl;
     if (!this->_querystring.empty())
         QUERY_STRING += this->_querystring;
-    char **newEnv = new char*[11];
+
+    char **newEnv = new char*[12];
 
     newEnv[0] = new char[SERVER_PROTOCOL.length()];
     newEnv[1] = new char[REDIRECT_STATUS.length()];
@@ -85,6 +91,7 @@ char **Handler::CgiSetEnv(std::string method)
     newEnv[7] = new char[QUERY_STRING.length()];
     newEnv[8] = new char[CONTENT_TYPE.length()];
     newEnv[9] = new char[CONTENT_LENGTH.length()];
+    newEnv[10] = new char[HTTP_COOKIE.length()];
 
     memcpy(newEnv[0], SERVER_PROTOCOL.c_str(), SERVER_PROTOCOL.length());
     memcpy(newEnv[1], REDIRECT_STATUS.c_str(), REDIRECT_STATUS.length());
@@ -96,7 +103,8 @@ char **Handler::CgiSetEnv(std::string method)
     memcpy(newEnv[7], QUERY_STRING.c_str(), QUERY_STRING.length());
     memcpy(newEnv[8], CONTENT_TYPE.c_str(), CONTENT_TYPE.length());
     memcpy(newEnv[9], CONTENT_LENGTH.c_str(), CONTENT_LENGTH.length());
-    newEnv[10] = NULL;
+    memcpy(newEnv[10], HTTP_COOKIE.c_str(), HTTP_COOKIE.length());
+    newEnv[11] = NULL;
 
     return (newEnv);
 }
@@ -177,12 +185,8 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
                 close(outFd);
                 execve(excearr[0], excearr, newEnv);
             }
-            
-            std::cout << "1\n";
             wait(0);
-            std::cout << "2\n";
 
-           
             //Free env
             for (unsigned int i = 0; newEnv[i] != NULL; i++)
                 delete newEnv[i];
@@ -203,6 +207,7 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             Header = Buf.substr(0, Buf.find("\r\n\r\n"));
             TmpOutFileStream << CgiHeaderFindStatus(Header);
             TmpOutFileStream << Header;
+            std::cout << "CGI HEader => "  << Header << std::endl;
 
             BodyPos = Buf.find("<!DOCTYPE html");
             if (BodyPos > 0)
