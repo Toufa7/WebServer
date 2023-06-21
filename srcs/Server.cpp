@@ -19,25 +19,34 @@ void    Server::CreateServer()
 {
     Init();
     if ((server_socket = socket(sinfo_ptr->ai_family, sinfo_ptr->ai_socktype, sinfo_ptr->ai_protocol)) == -1)
+    {
        perror("Error: SOCKET failed -> ");
+        exit(1);
+    }
     if (fcntl(server_socket, F_SETFL, O_NONBLOCK) == -1)
         perror("Error: FCNTL <Server Socket> -> ");
     int optval = 1;
     if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEPORT, &optval, sizeof(optval)) == -1)
        perror("Error: SETSOCKOPT failed -> ");
     if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
-       perror("Error: BIND failed -> ");
+    {
+        perror("Error: BIND failed -> ");
+        exit(1);
+    }
     if (listen(server_socket, FD_SETSIZE) == -1)
+    {
        perror("Error: LISTEN failed -> ");
+        exit(1);
+    }
     freeaddrinfo(sinfo_ptr);
 }
 
 void Server::DropClient()
 {
-    // if (active_clt > 0)
-    close(active_clt);
-    // if (this->itb->_client_handler.requested_file > 0)
-    close(this->itb->_client_handler.requested_file);
+    if (active_clt > 0)
+        close(active_clt);
+    if (this->itb->_client_handler.requested_file > 0)
+        close(this->itb->_client_handler.requested_file);
     FD_CLR(active_clt, &readfds);
     FD_CLR(active_clt, &writefds);
     _clients.erase(itb++);
