@@ -181,6 +181,7 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 	{
 		perror("Error : ParseRequstHeader <Finding end of request> ");
 		this->sendCodeResponse("500");
+		return 0;
 	}
 	std::string header = request.substr(0, header_len);			  // Save the header
 	body = req + header_len + 4, bytesreceived -= header_len + 4; // Save the body
@@ -198,16 +199,8 @@ int Handler::parseRequestHeader(char *req, int bytesreceived)
 		value = current_line.substr(delimiter_position + 2, current_line.length()); // [delimiter_position + 2] to remove the extra space before value
 		// storing key and value in map
 		this->_req_header[key] = value;
-		if (key == "Content-Type" && value.find(";") != std::string::npos)
-		{
-			if (value.find("=-") != std::string::npos)
-				this->_req_header["boundary"] = "--" + value.substr(value.find("=-") + 1, value.length());
-			this->_req_header["Content-Type"] = value.substr(0, value.find(";"));
-		}
 	}
 	
-	this->printRequstData();
-
 	if (!this->ValidateRequest())
 		return 0;
 
@@ -320,22 +313,25 @@ bool Handler::MatchLocation()
 	{
 		std::string locationslash;
 
-		if (serverLocations[i].GetLocationPath() != "/")
+		if (serverLocations[i].GetLocationPath() == "/")
 			locationslash = serverLocations[i].GetLocationPath();		
-		else
+		else if ( serverLocations[i].GetLocationPath()[(serverLocations[i].GetLocationPath().length() - 1)] != '/' )
+		{
 			locationslash = serverLocations[i].GetLocationPath();
-
-		std::cout << "location slach :" << locationslash << ":\n";
-		if (strncmp(locationslash.c_str(), serverLocations[i].GetLocationPath().c_str(), locationslash.size()) == 0)
+			locationslash += '/';
+			std::cout << "[" << locationslash << "]" << "\n";
+		}
+		if (strncmp(locationslash.c_str(), _path.c_str(), locationslash.size()) == 0)
 		{
 			this->_workingLocation = serverLocations[i];
-			std::cout << "Matched location -> " << serverLocations[i].GetLocationPath() << "<-\n";
+			std::cout << "MatchedLocation ->" << serverLocations[i].GetLocationPath() << "<-\n";
+			break;
 		}
-		else
-		{
-			this->sendCodeResponse("404");
-			return (0);
-		}
+		// else
+		// {
+		// 	this->sendCodeResponse("404");
+		// 	return (0);
+		// }
 	}
 	
 
@@ -354,8 +350,7 @@ bool Handler::MatchLocation()
 		return false;
 	}
 
-	_path = GetRootLocation(this->_uri, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
-	// std::cerr << this->_config._LocationsVec[] << std::endl;
+	_path = GetRootLocation(this->_path, this->_workingLocation.GetLocationPath(), this->_workingLocation.GetRoot());
 	return true;
 }
 
@@ -382,7 +377,6 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 	// 1: in the hex number
 	// 2: in the \r\n after the hex
 
-	// std::cerr << "1: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 	if (this->_chunkHexState == 2)
 	{
 		int i = 0;
@@ -390,7 +384,6 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 			i++;
 		this->_chunkHexState = 0;
 		body += i, bytesreceived -= i;
-		// std::cerr << "2: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 	}
 	if (this->_chunkSize <= 0)
 	{
@@ -398,32 +391,23 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 
 		while (this->_chunkHexState == 0 && i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
 			i++;
-		// std::cerr << "i is: " << i << std::endl;
 
 		if (i == bytesreceived && body[i - 1] == '\n')
 			this->_chunkHexState = 1;
 		else
 		{
-			// std::cerr << "3: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 			for (; i < bytesreceived && body[i] != '\r'; i++)
 				this->_chunkHex.push_back(body[i]);
 			this->_chunkHexState = 1;
-			// std::cerr << "i is: " << i << std::endl;
-			// std::cerr << "4: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 			if (i < bytesreceived && body[i] == '\r')
 			{
 				this->_chunkHexState = 2;
 				while (i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
 					i++;
-				// std::cerr << "i is: " << i << std::endl;
 				if ((i < bytesreceived && (body[i] != '\r' || body[i] != '\n')) || (i == bytesreceived && body[i - 1] == '\n'))
 					this->_chunkHexState = 0;
-				// std::cerr << "i is: " << i << std::endl;
-				// std::cerr << "5: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 			}
 		}
-		// std::cerr << "6: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
-		// std::cerr << "i is: " << i << std::endl;
 		if (this->_chunkHex == "0")
 			return 0;
 		
@@ -440,7 +424,6 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 
 		body += i, bytesreceived -= i;
 	}
-	// std::cerr << "7: bytesreceived: " << bytesreceived << " | _chunkHexState: " << this->_chunkHexState << " | _chunkSize: " << this->_chunkSize << " | chunkHex: " << this->_chunkHex << std::endl;
 
 	if (this->_chunkSize >= bytesreceived && bytesreceived > 0)
 	{
@@ -468,7 +451,13 @@ int Handler::HandlePost(char *body, int bytesreceived)
 
 	// Save MIME type and boundary if it exist
 	if (this->_req_header.find("Content-Type") != this->_req_header.end())
-		mimeType = this->_req_header["Content-Type"];
+	{
+		int semiPos = this->_req_header["Content-Type"].find(';');
+		if (semiPos != -1)
+			mimeType = this->_req_header["Content-Type"].substr(0, semiPos);
+		else
+			mimeType = this->_req_header["Content-Type"];
+	}
 
 	// Create a file stream for writing
 	if (this->_headerflag == 0)
@@ -524,7 +513,6 @@ int Handler::HandlePost(char *body, int bytesreceived)
 			write(this->_postFileFd, body, remmining);
 
 		this->_postRecv += bytesreceived;
-		// std::cout << bytesreceived << " " << this->_postRecv << std::endl;
 		if (this->_postRecv >= std::stoll(this->_req_header["Content-Length"]))
 			returnVal = 0;
 	}
@@ -539,6 +527,7 @@ int Handler::HandlePost(char *body, int bytesreceived)
 				this->HandleCgi(_path, "POST", 0, this->_workingLocation.GetCgiInfoPhp());
 			else if (this->_workingLocation.GetCgiInfoPerl().path != "n/a" && this->_workingLocation.GetCgiInfoPerl().type == fileExt)
 				this->HandleCgi(_path, "POST", 0, this->_workingLocation.GetCgiInfoPerl());
+			remove(_postFilePath.c_str());
 		}
 		else
 			this->sendCodeResponse("201");
@@ -637,8 +626,6 @@ int Handler::HandleGet()
 			}
 			if (this->_workingLocation.GetCgiInfoPhp().path == "n/a" || this->_workingLocation.GetCgiInfoPerl().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfoPhp().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
 			{
-				std::cout << "GET file handler"
-						  << "\n";
 				struct stat file;
 				if (this->_headerflag == 0)
 				{
@@ -709,6 +696,7 @@ int Handler::DeleteDirectory(const char *path)
 		{
 			std::cerr << "Error getting file or directory " << subdir << std::endl;
 			sendCodeResponse("403");
+			return 1;
 		}
 	}
 	closedir(directory);

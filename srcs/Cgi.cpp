@@ -1,15 +1,6 @@
 #include "../includes/Handler.hpp"
 
-//TO DO
-
-//client should save the opened tmp file fd : done
-//content lenght POST : need to be tested cause it may not be necessary
-//body size
-//leaks:done
-//remove cgi file when done:done
-//check sys calls for error returns
-
-std::string CgiHeaderFindStatus(std::string Header)
+std::string CgiHeaderFindStatus(std::string &Header)
 {
     int StatusPosition;
     std::string StatusString, StatusLocation, StatusCode;
@@ -52,10 +43,7 @@ std::string CgiBodySize(int BodySize)
 char **Handler::CgiSetEnv(std::string method)
 {
     // std::cout << this->_path << std::endl;
-    std::string SERVER_PROTOCOL = "SERVER_PROTOCOL=HTTP/1.1",
-                REDIRECT_STATUS = "REDIRECT_STATUS=200",
-                GATEWAY_INTERFACE = "GATEWAY_INTERFACE=CGI/1.1",
-                SCRIPT_NAME = "SCRIPT_NAME=",
+    std::string REDIRECT_STATUS = "REDIRECT_STATUS=200",
                 REQUEST_METHOD = "REQUEST_METHOD=",
                 SCRIPT_FILENAME = "SCRIPT_FILENAME=",
                 PATH_INFO = "PATH_INFO=",
@@ -65,7 +53,6 @@ char **Handler::CgiSetEnv(std::string method)
                 QUERY_STRING = "QUERY_STRING=";
     REQUEST_METHOD += method;
     SCRIPT_FILENAME += this->_path.substr(_path.find_last_of('/', 0), _path.length());
-    SCRIPT_NAME += this->_path.substr(_path.find_last_of('/', 0), _path.length());
     PATH_INFO += this->_path;
     if (this->_req_header.find("Content-Length") != this->_req_header.end())
         CONTENT_LENGTH += this->_req_header["Content-Length"];
@@ -79,89 +66,47 @@ char **Handler::CgiSetEnv(std::string method)
     if (!this->_querystring.empty())
         QUERY_STRING += this->_querystring;
 
-    char **newEnv = new char*[12];
+    char **newEnv = new char*[9];
 
-    newEnv[0] = new char[SERVER_PROTOCOL.length()];
-    newEnv[1] = new char[REDIRECT_STATUS.length()];
-    newEnv[2] = new char[GATEWAY_INTERFACE.length()];
-    newEnv[3] = new char[SCRIPT_NAME.length()];
-    newEnv[4] = new char[REQUEST_METHOD.length()];
-    newEnv[5] = new char[SCRIPT_FILENAME.length()];
-    newEnv[6] = new char[PATH_INFO.length()];
-    newEnv[7] = new char[QUERY_STRING.length()];
-    newEnv[8] = new char[CONTENT_TYPE.length()];
-    newEnv[9] = new char[CONTENT_LENGTH.length()];
-    newEnv[10] = new char[HTTP_COOKIE.length()];
+    newEnv[0] = new char[REDIRECT_STATUS.length() + 1];
+    newEnv[1] = new char[REQUEST_METHOD.length() + 1];
+    newEnv[2] = new char[SCRIPT_FILENAME.length() + 1];
+    newEnv[3] = new char[PATH_INFO.length() + 1];
+    newEnv[4] = new char[QUERY_STRING.length() + 1];
+    newEnv[5] = new char[CONTENT_TYPE.length() + 1];
+    newEnv[6] = new char[CONTENT_LENGTH.length() + 1];
+    newEnv[7] = new char[HTTP_COOKIE.length() + 1];
 
-    memcpy(newEnv[0], SERVER_PROTOCOL.c_str(), SERVER_PROTOCOL.length());
-    memcpy(newEnv[1], REDIRECT_STATUS.c_str(), REDIRECT_STATUS.length());
-    memcpy(newEnv[2], GATEWAY_INTERFACE.c_str(), GATEWAY_INTERFACE.length());
-    memcpy(newEnv[3], SCRIPT_NAME.c_str(), SCRIPT_NAME.length());
-    memcpy(newEnv[4], REQUEST_METHOD.c_str(), REQUEST_METHOD.length());
-    memcpy(newEnv[5], SCRIPT_FILENAME.c_str(), SCRIPT_FILENAME.length());
-    memcpy(newEnv[6], PATH_INFO.c_str(), PATH_INFO.length());
-    memcpy(newEnv[7], QUERY_STRING.c_str(), QUERY_STRING.length());
-    memcpy(newEnv[8], CONTENT_TYPE.c_str(), CONTENT_TYPE.length());
-    memcpy(newEnv[9], CONTENT_LENGTH.c_str(), CONTENT_LENGTH.length());
-    memcpy(newEnv[10], HTTP_COOKIE.c_str(), HTTP_COOKIE.length());
-    newEnv[11] = NULL;
-
+    memcpy(newEnv[0], REDIRECT_STATUS.c_str(), REDIRECT_STATUS.length() + 1);
+    memcpy(newEnv[1], REQUEST_METHOD.c_str(), REQUEST_METHOD.length() + 1);
+    memcpy(newEnv[2], SCRIPT_FILENAME.c_str(), SCRIPT_FILENAME.length() + 1);
+    memcpy(newEnv[3], PATH_INFO.c_str(), PATH_INFO.length() + 1);
+    memcpy(newEnv[4], QUERY_STRING.c_str(), QUERY_STRING.length() + 1);
+    memcpy(newEnv[5], CONTENT_TYPE.c_str(), CONTENT_TYPE.length() + 1);
+    memcpy(newEnv[6], CONTENT_LENGTH.c_str(), CONTENT_LENGTH.length() + 1);
+    memcpy(newEnv[7], HTTP_COOKIE.c_str(), HTTP_COOKIE.length() + 1);
+    newEnv[8] = NULL;
+    
     return (newEnv);
 }
 
-int Handler::postCgi(cgi &cgiInfo)
-{
-    std::cerr << "post cgi \n";
-
-    std::string outFilePath = this->_shared.generateFileName(this->_path, "");
-	int outFilefd = open(outFilePath.c_str(), O_CREAT | O_RDWR | O_APPEND, 0777);
-
-    this->_path = this->_postFilePath;
-    char **newEnv = CgiSetEnv("POST");
-
-    // PHP Script child process
-    char *excearr[] = {const_cast<char *>(cgiInfo.path.c_str()), const_cast<char *>(this->_postFilePath.c_str()), NULL};
-    pid_t pid = fork();
-    if (pid == 0)
-    {
-        dup2(outFilefd, 1);
-        close(outFilefd);
-
-        execve(excearr[0], excearr, newEnv);
-    }
-    std::cout << "1\n";
-    wait(0);
-    std::cout << "2\n";
-    close(outFilefd);
-    std::remove(this->_postFilePath.c_str());
-    //Free env
-    for (unsigned int i = 0; newEnv[i] != NULL; i++)
-        delete newEnv[i];
-    delete newEnv;
-    return 0;
-}
 
 int Handler::HandleCgi(std::string path, std::string method, int header_flag, cgi &cgitype)
 {
-    static int var = 0;
-    var++;
-    int outFd, BodyPos;
-    std::string Buf, TmpStr, Header, Body, tmpfilename;
-    std::ifstream TmpOutFile;
-    std::ofstream ParsedTmpOutFile;
-    std::stringstream TmpOutFileStream;
+    int outFd;
+    std::string Buf, Header, Body, tmpfilename;
     struct stat s;
 
     std::cout << "Handle GGI -> " << cgitype.path << "\n";
 
-    TmpOutFile.setf(std::ios::binary);
     if (stat(path.c_str(), &s) == 0 && (s.st_mode & S_IFREG))
     {
-        std::cout << "Var -> " << var << std::endl;
         if (header_flag == 0)
         {
-            char **newEnv = CgiSetEnv(method); 
-            tmpfilename = this->_shared.generateFileName("upload/", ".tmp");
+            char **newEnv = CgiSetEnv(method);
+
+
+            tmpfilename = this->_shared.generateFileName("/tmp/", "");
             outFd = open(tmpfilename.c_str(), O_CREAT | O_RDWR | O_TRUNC , 0777);
             if (outFd < 0)
             {
@@ -171,21 +116,28 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             //this may cause back and forth calling if you add return
             this->_cgiTmpFileName = tmpfilename;
             
+            std::cout << "cgitype.path: " << cgitype.path << std::endl;
+            std::cout << "scrip   path: " << path << std::endl;
+            std::cout << "in file path: " << this->_postFilePath << std::endl;
+            std::cout << "ou file path: " << tmpfilename << std::endl;
+
             //PHP Script child process
             char *excearr[] = {const_cast<char *>(cgitype.path.c_str()), const_cast<char *>(path.c_str()), NULL};
-            pid_t CID = fork();
-            if (CID == 0)
+            pid_t pid = fork();
+            if (pid == 0)
             {
                 if (method == "POST")
                 {
-                    dup2(this->_postFileFd, 0);
-                    close(this->_postFileFd);
+                    int fd = open(this->_postFilePath.c_str(), O_RDONLY);
+                    dup2(fd, 0);
+                    close(fd);
                 }
                 dup2(outFd, 1);
                 close(outFd);
                 execve(excearr[0], excearr, newEnv);
             }
             wait(0);
+           
 
             //Free env
             for (unsigned int i = 0; newEnv[i] != NULL; i++)
@@ -193,63 +145,33 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             delete newEnv;
             
             //Reading tmp file
-            TmpOutFile.open(this->_cgiTmpFileName.c_str());
+            std::ifstream TmpOutFile(this->_cgiTmpFileName.c_str());
             if (!TmpOutFile)
-                std::cout << "The file could not be opened properly\n";
-            while (TmpOutFile)
             {
-                std::getline(TmpOutFile, TmpStr);
-                Buf += TmpStr += '\n';
+                this->sendCodeResponse("500");
+                return (0);
             }
+            std::stringstream ss;
+			ss << TmpOutFile.rdbuf();
+            Buf = ss.str();
+            ss.clear();
             TmpOutFile.close();
 
-            //Parse header
+            // Parse header
             Header = Buf.substr(0, Buf.find("\r\n\r\n"));
-            TmpOutFileStream << CgiHeaderFindStatus(Header);
-            TmpOutFileStream << Header;
-            std::cout << "CGI HEader => "  << Header << std::endl;
+            if (Header.length() + 4 < Buf.length())
+                Body = Buf.substr(Header.length() + 4, (Buf.length() - Header.length() - 4));
+            Buf.clear();
+            Buf.append(CgiHeaderFindStatus(Header));   
+            Buf.append(Header);
+            Buf.append(CgiBodySize(Body.length()));
+            Buf.append("\r\n\r\n");
+            Buf.append(Body);
 
-            BodyPos = Buf.find("<!DOCTYPE html");
-            if (BodyPos > 0)
-            {
-                Body = Buf.substr(BodyPos, (Buf.length() - BodyPos));        
-                TmpOutFileStream << CgiBodySize(Body.length());
-            }
-
-            ParsedTmpOutFile.open(this->_cgiTmpFileName);
-            ParsedTmpOutFile << TmpOutFileStream.str();
-            ParsedTmpOutFile << "\r\n\r\n";
-            if (BodyPos >= 0)
-                ParsedTmpOutFile << Body;
-            ParsedTmpOutFile.close();
-    
-            
-            this->_cgiTmpFilefd = open(this->_cgiTmpFileName.c_str(), O_RDONLY , 0777);
-            bytesread = read(this->_cgiTmpFilefd, buffer, sizeof(buffer));
-            if (bytesread == -1)
-                perror("Error : Read <CGI>  -> ");
-            bytessent = send(this->client_socket, buffer, bytesread, 0);
-            if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
-            {
-                perror("Error (Send : CGI Header) -> ");
-                close(this->_cgiTmpFilefd);
-                remove(tmpfilename.c_str());
-                return (0);
-            }
-        }
-        if (header_flag != 0)
-        {
-            bytesread = read(this->_cgiTmpFilefd, buffer, sizeof(buffer));
-            if (bytesread == -1)
-                perror("Error : Read <CGI>  -> ");
-            bytessent = send(this->client_socket, buffer, bytesread, 0);
-            if (bytessent == -1 || bytessent == 0 || bytesread < CHUNK_SIZE)
-            {
-                perror("Error : Send <CGI>  =>  ");
-                close(this->_cgiTmpFilefd);
-                remove(tmpfilename.c_str());
-                return (0);
-            }
+            if (send(this->client_socket, Buf.c_str(), Buf.size(), 0) == -1)
+                perror("Error : Send <Response Header>  -> ");
+            return 0;
+            remove(tmpfilename.c_str());
         }
     }
     else
