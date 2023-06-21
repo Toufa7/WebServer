@@ -64,6 +64,7 @@ int Server::AcceptAddClientToSet()
 void Server::SelectSetsInit()
 {
     timeout.tv_usec = 0;
+    timeout.tv_sec = 0;
     
     FD_ZERO(&readfds);
     FD_ZERO(&writefds);
