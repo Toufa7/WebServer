@@ -54,6 +54,8 @@ class Handler
 		int 		_chunkSize;
 		int 		_postFileFd;
 		int 		_headerflag;
+		int			_cgiPid;
+		// char 		**_cgiEnv;
 
 
 		/*
@@ -64,7 +66,7 @@ class Handler
 		int		HandleDelete();
 		int 	HandlePost(char *body, int bytesreceived);
 		int		chunkedPost(char *body, int bytesreceived);
-		int		HandleCgi(std::string path, std::string method, int header_flag, cgi &cgitype);
+		int		HandleCgi(std::string path, std::string method, cgi &cgitype);
 		char	**CgiSetEnv(std::string method);
 		bool	ValidateRequest();
 		bool	MatchLocation();

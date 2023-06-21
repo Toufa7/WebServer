@@ -9,6 +9,7 @@ Handler::Handler()
 	this->_chunkSize = 0;
 	this->_postRecv = 0;
 	this->_chunkHexState = 0;
+	this->_cgiPid = -1;
 }
 
 //  ------------- ACCESSOR --------------------
@@ -265,7 +266,6 @@ bool Handler::MatchLocation()
 	this->_path = this->_uri;
 	std::vector<ServerLocation> serverLocations = this->_config.GetLocationsVec();
 	size_t i = 0; 
-	//old_size = 0, root_location = 0;
 
 	// Seperate Path from args if there is any
 	if (this->_uri.find('?') != std::string::npos)
@@ -274,41 +274,9 @@ bool Handler::MatchLocation()
 		_querystring = this->_uri.substr(this->_uri.find('?') + 1, this->_uri.length());
 	}
 
-	// for (unsigned long i = 0; i < serverLocations.size(); i++)
-	// {
-	// 	std::cout << "Before Sorting -> " << serverLocations[i].GetLocationPath() << "\n";
-	// }
-
-	//std::cout << "Sort called here\n";
 	std::sort(serverLocations.begin(), serverLocations.end(), fn);
 
-	// for (unsigned long i = 0; i < serverLocations.size(); i++)
-	// {
-	// 	std::cout << "After Sorting -> " << serverLocations[i].GetLocationPath() << "\n";
-	// }
-
-	// find the closest location to requested resource (old)
-	// for (i = 0; i < serverLocations.size(); i++)
-	// {
-	// 	size_t tmp_index = _path.find(serverLocations[i].GetLocationPath());
-	// 	if (tmp_index != std::string::npos)
-	// 	{
-	// 		if (serverLocations[i].GetLocationPath() == "/") // saving '/' location
-	// 			root_location = i;
-	// 		if ((_path[0] == '/') && (_path.length() == 1)) // case of '/' only
-	// 			this->_workingLocation = serverLocations[i];
-	// 		if (serverLocations[i].GetLocationPath().length() > old_size) // case of closest valid location
-	// 		{
-	// 			old_size = serverLocations[i].GetLocationPath().length();
-	// 			this->_workingLocation = serverLocations[i];
-	// 		}
-	// 		if ((_path[0] == '/') && (i == serverLocations.size()) && old_size == 0) // case of '/not_valid'
-	// 			this->_workingLocation = serverLocations[root_location];
-	// 	}
-	// }
-
 	// find the closest location to requested resource (new)
-	std::cout << "Matching the location ...\n";
 	for (i = 0; i < serverLocations.size(); i++)
 	{
 		std::string locationslash;
@@ -319,20 +287,18 @@ bool Handler::MatchLocation()
 		{
 			locationslash = serverLocations[i].GetLocationPath();
 			locationslash += '/';
-			std::cout << "[" << locationslash << "]" << "\n";
 		}
 		if (strncmp(locationslash.c_str(), _path.c_str(), locationslash.size()) == 0)
 		{
 			this->_workingLocation = serverLocations[i];
-			std::cout << "MatchedLocation ->" << serverLocations[i].GetLocationPath() << "<-\n";
 			break;
 		}
-		// else
-		// {
-		// 	this->sendCodeResponse("404");
-		// 	return (0);
-		// }
 	}
+	// if (i == serverLocations.size())
+	// {
+	// 	this->sendCodeResponse("404");
+	// 	return (0);
+	// }
 	
 
 	// Check for location redirection
@@ -444,6 +410,14 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 
 int Handler::HandlePost(char *body, int bytesreceived)
 {
+	if (this->_cgiPid != -1)
+	{
+		if (this->_workingLocation.GetCgiInfoPhp().type == this->_shared.fileExtention(this->_path))
+			return this->HandleCgi(_path, "POST", this->_workingLocation.GetCgiInfoPhp());
+		else if (this->_workingLocation.GetCgiInfoPerl().type == this->_shared.fileExtention(this->_path))
+			return this->HandleCgi(_path, "POST", this->_workingLocation.GetCgiInfoPerl());
+	}
+
 	std::string mimeType = "";
 	struct stat s;
 	int returnVal = 1;
@@ -524,10 +498,9 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		{
 			std::string fileExt = this->_shared.fileExtention(this->_path);
 			if (this->_workingLocation.GetCgiInfoPhp().path != "n/a" && this->_workingLocation.GetCgiInfoPhp().type == fileExt)
-				this->HandleCgi(_path, "POST", 0, this->_workingLocation.GetCgiInfoPhp());
+				returnVal = this->HandleCgi(_path, "POST", this->_workingLocation.GetCgiInfoPhp());
 			else if (this->_workingLocation.GetCgiInfoPerl().path != "n/a" && this->_workingLocation.GetCgiInfoPerl().type == fileExt)
-				this->HandleCgi(_path, "POST", 0, this->_workingLocation.GetCgiInfoPerl());
-			remove(_postFilePath.c_str());
+				returnVal = this->HandleCgi(_path, "POST", this->_workingLocation.GetCgiInfoPerl());
 		}
 		else
 			this->sendCodeResponse("201");
@@ -540,6 +513,15 @@ int Handler::HandlePost(char *body, int bytesreceived)
 
 int Handler::HandleGet()
 {
+	if (this->_cgiPid != -1)
+	{
+		if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPhp().type))
+			return this->HandleCgi(_path, "GET", this->_workingLocation.GetCgiInfoPhp());
+				
+		if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPerl().type))
+			return this->HandleCgi(_path, "GET", this->_workingLocation.GetCgiInfoPerl());
+	}
+
 	// TODO: Function to match the location, takes locationsVec, and uri , and should return the closest match
 	int indexfileflag = 0;
 	std::string RealPath, tmp_str, DirStr, UriInit;
@@ -615,13 +597,11 @@ int Handler::HandleGet()
 				// handle file cgi
 				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPhp().type))
 				{
-					if (this->HandleCgi(_path, "GET", _headerflag, this->_workingLocation.GetCgiInfoPhp()) == 0)
-						return (0);
+					return this->HandleCgi(_path, "GET", this->_workingLocation.GetCgiInfoPhp());
 				}
 				if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPerl().type))
 				{
-					if (this->HandleCgi(_path, "GET", _headerflag, this->_workingLocation.GetCgiInfoPerl()) == 0)
-						return (0);
+					return this->HandleCgi(_path, "GET", this->_workingLocation.GetCgiInfoPerl());
 				}
 			}
 			if (this->_workingLocation.GetCgiInfoPhp().path == "n/a" || this->_workingLocation.GetCgiInfoPerl().path == "n/a" || this->_shared.fileExtention(_path) != this->_workingLocation.GetCgiInfoPhp().type || (indexfileflag == 1)) // regular file, non valid cgi extension and index file present with cgi off
