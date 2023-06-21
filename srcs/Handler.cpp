@@ -69,7 +69,8 @@ std::string Handler::GetRootLocation(std::string uri, std::string locationPath, 
 	std::string MatchedUri;
 	if (uri.find(locationPath) != std::string::npos)
 	{
-		root += '/';
+		if (locationPath.front() != '/')
+			root += '/';
 		MatchedUri = uri.replace(0, locationPath.length(), root);
 	}
 	else
@@ -254,10 +255,7 @@ bool Handler::ValidateRequest()
 
 bool fn(ServerLocation &x, ServerLocation &y)
 {
-
-    if (x.GetLocationPath() != y.GetLocationPath())
-        return x.GetLocationPath() > y.GetLocationPath();
-    return x.GetLocationPath() < y.GetLocationPath();
+    return x.GetLocationPath().length() > y.GetLocationPath().length();
 }
 
 // match location from the config file and validate method
@@ -281,24 +279,23 @@ bool Handler::MatchLocation()
 	{
 		std::string locationslash;
 
-		if (serverLocations[i].GetLocationPath() == "/")
-			locationslash = serverLocations[i].GetLocationPath();		
-		else if ( serverLocations[i].GetLocationPath()[(serverLocations[i].GetLocationPath().length() - 1)] != '/' )
-		{
-			locationslash = serverLocations[i].GetLocationPath();
-			locationslash += '/';
-		}
-		if (strncmp(locationslash.c_str(), _path.c_str(), locationslash.size()) == 0)
+		size_t j = 0;
+		while (j < _path.size() && j < serverLocations[i].GetLocationPath().size() && 
+				_path[j] == serverLocations[i].GetLocationPath()[j])
+			j++;
+		
+		if ((j == _path.size() && j == serverLocations[i].GetLocationPath().size())
+			|| (j == serverLocations[i].GetLocationPath().size() && j < _path.size() && _path[j] == '/'))
 		{
 			this->_workingLocation = serverLocations[i];
 			break;
 		}
 	}
-	// if (i == serverLocations.size())
-	// {
-	// 	this->sendCodeResponse("404");
-	// 	return (0);
-	// }
+	if (i == serverLocations.size())
+	{
+		this->sendCodeResponse("404");
+		return (0);
+	}
 	
 
 	// Check for location redirection
@@ -439,6 +436,13 @@ int Handler::HandlePost(char *body, int bytesreceived)
 		stat(this->_path.c_str(), &s);
 		if (S_ISDIR(s.st_mode))
 		{
+			if (this->_workingLocation.GetUpload() == 0)
+			{
+				this->sendCodeResponse("403");
+				return 0;
+			}
+			if (_path.back() != '/')
+				_path += "/";
 			_postFilePath = this->_shared.generateFileName(this->_path, this->_shared.file_extensions[mimeType]);
 			this->_postFileFd = open(_postFilePath.c_str(), O_CREAT | O_RDWR | O_APPEND, 0777);
 		}
@@ -453,7 +457,7 @@ int Handler::HandlePost(char *body, int bytesreceived)
 				}
 				else
 				{
-					this->sendCodeResponse("403");
+					this->sendCodeResponse("404");
 					return 0;
 				}
 		}
