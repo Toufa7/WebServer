@@ -258,12 +258,21 @@ bool Handler::ValidateRequest()
 	return this->MatchLocation();
 }
 
+bool fn(ServerLocation &x, ServerLocation &y)
+{
+
+    if (x.GetLocationPath() != y.GetLocationPath())
+        return x.GetLocationPath() > y.GetLocationPath();
+    return x.GetLocationPath() < y.GetLocationPath();
+}
+
 // match location from the config file and validate method
 bool Handler::MatchLocation()
 {
 	this->_path = this->_uri;
 	std::vector<ServerLocation> serverLocations = this->_config.GetLocationsVec();
-	size_t i = 0, old_size = 0, root_location = 0;
+	size_t i = 0; 
+	//old_size = 0, root_location = 0;
 
 	// Seperate Path from args if there is any
 	if (this->_uri.find('?') != std::string::npos)
@@ -272,25 +281,63 @@ bool Handler::MatchLocation()
 		_querystring = this->_uri.substr(this->_uri.find('?') + 1, this->_uri.length());
 	}
 
-	// find the closest location to requested resource
+	// for (unsigned long i = 0; i < serverLocations.size(); i++)
+	// {
+	// 	std::cout << "Before Sorting -> " << serverLocations[i].GetLocationPath() << "\n";
+	// }
+
+	//std::cout << "Sort called here\n";
+	std::sort(serverLocations.begin(), serverLocations.end(), fn);
+
+	// for (unsigned long i = 0; i < serverLocations.size(); i++)
+	// {
+	// 	std::cout << "After Sorting -> " << serverLocations[i].GetLocationPath() << "\n";
+	// }
+
+	// find the closest location to requested resource (old)
+	// for (i = 0; i < serverLocations.size(); i++)
+	// {
+	// 	size_t tmp_index = _path.find(serverLocations[i].GetLocationPath());
+	// 	if (tmp_index != std::string::npos)
+	// 	{
+	// 		if (serverLocations[i].GetLocationPath() == "/") // saving '/' location
+	// 			root_location = i;
+	// 		if ((_path[0] == '/') && (_path.length() == 1)) // case of '/' only
+	// 			this->_workingLocation = serverLocations[i];
+	// 		if (serverLocations[i].GetLocationPath().length() > old_size) // case of closest valid location
+	// 		{
+	// 			old_size = serverLocations[i].GetLocationPath().length();
+	// 			this->_workingLocation = serverLocations[i];
+	// 		}
+	// 		if ((_path[0] == '/') && (i == serverLocations.size()) && old_size == 0) // case of '/not_valid'
+	// 			this->_workingLocation = serverLocations[root_location];
+	// 	}
+	// }
+
+	// find the closest location to requested resource (new)
+	std::cout << "Matching the location ...\n";
 	for (i = 0; i < serverLocations.size(); i++)
 	{
-		size_t tmp_index = _path.find(serverLocations[i].GetLocationPath());
-		if (tmp_index != std::string::npos)
+		std::string locationslash;
+
+		if (serverLocations[i].GetLocationPath() != "/")
+			locationslash = serverLocations[i].GetLocationPath();		
+		else
+			locationslash = serverLocations[i].GetLocationPath();
+
+		std::cout << "location slach :" << locationslash << ":\n";
+		if (strncmp(locationslash.c_str(), serverLocations[i].GetLocationPath().c_str(), locationslash.size()) == 0)
 		{
-			if (serverLocations[i].GetLocationPath() == "/") // saving '/' location
-				root_location = i;
-			if ((_path[0] == '/') && (_path.length() == 1)) // case of '/' only
-				this->_workingLocation = serverLocations[i];
-			if (serverLocations[i].GetLocationPath().length() > old_size) // case of closest valid location
-			{
-				old_size = serverLocations[i].GetLocationPath().length();
-				this->_workingLocation = serverLocations[i];
-			}
-			if ((_path[0] == '/') && (i == serverLocations.size()) && old_size == 0) // case of '/not_valid'
-				this->_workingLocation = serverLocations[root_location];
+			this->_workingLocation = serverLocations[i];
+			std::cout << "Matched location -> " << serverLocations[i].GetLocationPath() << "<-\n";
+		}
+		else
+		{
+			this->sendCodeResponse("404");
+			return (0);
 		}
 	}
+	
 
 	// Check for location redirection
 	if (this->_workingLocation.GetRedirectionInfo().RedirectionFlag)

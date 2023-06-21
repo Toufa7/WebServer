@@ -19,6 +19,17 @@ ServerLocation::ServerLocation()
     _Upload = 0;   
 }
 
+bool ServerLocation::operator < (const ServerLocation & ServerObj)
+{
+    return this->GetLocationPath() < ServerObj._LocationPath;
+}
+
+bool ServerLocation::operator > (const ServerLocation & ServerObj)
+{
+    return this->GetLocationPath() > ServerObj._LocationPath;
+}
+
+
 ServerLocation::ServerLocation(const ServerLocation & ServerObj)
 {
     *this = ServerObj;

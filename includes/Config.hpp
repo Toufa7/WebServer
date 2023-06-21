@@ -42,10 +42,13 @@ class ServerLocation
         std::vector<std::string>    _AllowedMethodsVec;
         std::vector<std::string>    _IndexesVec;
     public:
+
         ServerLocation();
         ~ServerLocation();
         ServerLocation(const ServerLocation & ServerObj);
         ServerLocation & operator = (const ServerLocation & ServerObj);
+        bool operator < (const ServerLocation & ServerObj);
+        bool operator > (const ServerLocation & ServerObj);
         int                         GetAutoIndex(void);
         int                         GetUpload(void);
         cgi&                        GetCgiInfoPhp(void);
