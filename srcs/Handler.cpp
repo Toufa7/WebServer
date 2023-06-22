@@ -2,12 +2,6 @@
 
 //  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
 
-/*
-1070440448
-1118990
-534000247
-33472529
-*/
 void Handler::setData()
 {
 	this->_postFileFd = -1;
