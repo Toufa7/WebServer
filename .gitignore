@@ -5,7 +5,6 @@ Server
 *.mp4
 */*.o
 .vscode
-upload
 *.dSYM
 .idea
 .DS_Store
