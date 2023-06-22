@@ -43,9 +43,8 @@ std::string Handler::GetRootLocation(std::string uri, std::string locationPath, 
 {
 	std::string MatchedUri;
 	if (uri.find(locationPath) != std::string::npos)
-	{
-		if (locationPath.front() != '/')
-			root += '/';
+	{ 
+		root += '/';
 		MatchedUri = uri.replace(0, locationPath.length(), root);
 	}
 	else
@@ -260,7 +259,7 @@ bool Handler::MatchLocation()
 			j++;
 		
 		if ((j == _path.size() && j == serverLocations[i].GetLocationPath().size())
-			|| (j == serverLocations[i].GetLocationPath().size() && j < _path.size() && _path[j] == '/'))
+			|| (j == serverLocations[i].GetLocationPath().size() && ((j < _path.size() && _path[j] == '/') || (j > 0 && _path[j - 1] == '/'))))
 		{
 			this->_workingLocation = serverLocations[i];
 			break;
@@ -501,6 +500,7 @@ int Handler::HandlePost(char *body, int bytesreceived)
 
 int Handler::HandleGet()
 {
+
 	if (this->_cgiPid != -1)
 	{
 		if ((this->_shared.fileExtention(_path) == this->_workingLocation.GetCgiInfoPhp().type))

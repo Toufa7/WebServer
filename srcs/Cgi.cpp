@@ -42,7 +42,6 @@ std::string CgiBodySize(int BodySize)
 
 char **Handler::CgiSetEnv(std::string method)
 {
-    // std::cout << this->_path << std::endl;
     std::string REDIRECT_STATUS = "REDIRECT_STATUS=200",
                 REQUEST_METHOD = "REQUEST_METHOD=",
                 SCRIPT_FILENAME = "SCRIPT_FILENAME=",
@@ -96,8 +95,6 @@ int Handler::HandleCgi(std::string path, std::string method, cgi &cgitype)
     std::string Buf, Header, Body, tmpfilename;
     struct stat s;
 
-    // std::cout << "Handle GGI -> " << cgitype.path << " for " << method <<  " method, pid is " << this->_cgiPid <<  std::endl;
-
     if (stat(path.c_str(), &s) == 0 && (s.st_mode & S_IFREG))
     {
         if (this->_cgiPid == -1)
@@ -111,13 +108,7 @@ int Handler::HandleCgi(std::string path, std::string method, cgi &cgitype)
                 this->sendCodeResponse("500");
                 return (0);
             }
-            //this may cause back and forth calling if you add return
             this->_cgiTmpFileName = tmpfilename;
-
-            // std::cout << "cgitype.path: " << cgitype.path << std::endl;
-            // std::cout << "scrip   path: " << path << std::endl;
-            // std::cout << "in file path: " << this->_postFilePath << std::endl;
-            // std::cout << "ou file path: " << tmpfilename << std::endl;
 
             //PHP Script child process
             char *excearr[] = {const_cast<char *>(cgitype.path.c_str()), const_cast<char *>(path.c_str()), NULL};
