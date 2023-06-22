@@ -88,29 +88,20 @@ void Server::Start()
     signal(SIGPIPE, SIG_IGN);   
     tmpfdsread = readfds;
     tmpfdswrite = writefds;
-    /*
-        ! Select keeps waiting for an activity once a return check I/O
-    */
+
     activity = select(maxfds + 1, &tmpfdsread, &tmpfdswrite, NULL, &timeout);
     if (activity == -1)
        perror("Error: Select Failed -> ");
-    /* 
-        ^ Catching an activity and accepting the new conenction 
-        ^ Always true whenever a new connection came to the server
-    */
+
     if (FD_ISSET(server_socket, &tmpfdsread))
     {
         client_socket = AcceptAddClientToSet();
     }
     for (itb = _clients.begin(); itb != _clients.end();)
     {
-        // std::cout << "List Size -> " << _clients.size() << "    Max Fds -> " << maxfds << std::endl;
         bytesreceived = 0;
         active_clt = itb->GetCltSocket();
-        /* 
-            ? Socket is ready to read
-        */
-        // std::cout << "Activiy On Read -> " << FD_ISSET(active_clt, &tmpfdsread) << std::endl;
+
         if (FD_ISSET(active_clt, &tmpfdsread))
         {
             bytesreceived = recv(active_clt, requested_data, sizeof(requested_data), 0);
@@ -131,10 +122,6 @@ void Server::Start()
                 readyforwrite = true;
             }
         }
-        /* 
-            ~ Socket is ready to write
-        */
-        // std::cout << "Activiy On Write -> " << FD_ISSET(active_clt, &tmpfdswrite) << std::endl;
         if (FD_ISSET(active_clt, &tmpfdswrite) && readyforwrite == true)
         {
             if (itb->_client_handler.Driver(requested_data, bytesreceived) == 0)

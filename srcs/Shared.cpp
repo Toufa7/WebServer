@@ -1,20 +1,5 @@
 #include "../includes/Shared.hpp"
 
-Exceptions::Exceptions(std::string error_message) : _error_message(error_message)
-{
-	// Exceptions class constructor
-}
-
-const char *Exceptions::what() const throw()
-{
-	return (_error_message.c_str());
-}
-
-Exceptions::~Exceptions() throw()
-{
-	// Exceptions class destructor
-}
-
 Shared::Shared()
 {
 	this->file_extensions["text/html"]= ".html";

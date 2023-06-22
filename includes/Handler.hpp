@@ -23,8 +23,6 @@ class Handler
 		void 	setData();
 		std::string	GetRootLocation(std::string uri, std::string locationPath, std::string root);
 		int			Driver(char *requested_data, int bytesreceived);
-		std::string	getRequestMethod();
-		std::string	getRequestURI();
 		void		setConfig(ServerConfig &config);
 
 		int			_cgiTmpFilefd;
@@ -70,7 +68,6 @@ class Handler
 		bool	ValidateRequest();
 		bool	MatchLocation();
 		bool	ValidateURI(const std::string &uri);
-		void	printRequstData();
 		void	SendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength);
 		void	sendCodeResponse(std::string statusCode);
 		void	DeleteFile(const char *path);

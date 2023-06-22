@@ -16,22 +16,9 @@ void Handler::setData()
 	this->_postRecv = 0;
 	this->_chunkHexState = 0;
 	this->_cgiPid = -1;
-	std::cout << "Handler constructer client soc: " << this->client_socket << std::endl;
 }
 
 //  ------------- ACCESSOR --------------------
-
-// Request method getter
-std::string Handler::getRequestMethod()
-{
-	return (this->_method);
-}
-
-// Request path getter
-std::string Handler::getRequestURI()
-{
-	return (this->_uri);
-}
 
 void Handler::setConfig(ServerConfig &config)
 {
@@ -42,7 +29,6 @@ void Handler::setConfig(ServerConfig &config)
 
 int Handler::Driver(char *requested_data, int bytesreceived)
 {
-	// std::cout << "client soc: " << this->client_socket <<  " | _headerflag: " << _headerflag << std::endl;
 	int re = 1;
 	if (this->_headerflag == 0)
 		re = this->parseRequestHeader(requested_data, bytesreceived);
@@ -57,19 +43,6 @@ int Handler::Driver(char *requested_data, int bytesreceived)
 	}
 	this->_headerflag = 1;
 	return re;
-}
-
-void Handler::printRequstData()
-{
-	// Print Header key and values
-	std::cout << "----------------- Request Header ---------------------\n";
-	std::cout << "method: |" << this->_method << "|\n";
-	std::cout << "path: |" << this->_uri << "|\n";
-	for (std::map<std::string, std::string>::const_iterator it = this->_req_header.begin(); it != this->_req_header.end(); ++it)
-	{
-		std::cout << it->first << ": |" << it->second << "|\n";
-	}
-	std::cout << "----------------- end of Header ---------------------\n\n";
 }
 
 std::string Handler::GetRootLocation(std::string uri, std::string locationPath, std::string root)
@@ -349,14 +322,6 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 	// 2: in the \r\n after the hex
 
 
-	// std::cout << "=================================================\n" << std::endl;
-	// std::cout << "Fildes -> " << this->_postFileFd << std::endl;
-	// std::cout << "bytesreceived -> " << bytesreceived << std::endl;
-	// std::cout << "this->_chunkSize -> " << this->_chunkSize << std::endl;
-	// std::cout << "this->_chunkHexState -> " << this->_chunkHexState<< std::endl;
-	// std::cout << "*************** body stsrt *****************\n" << std::endl;
-	// std::cout << body << std::endl;
-	// std::cout << "*************** body end   *****************\n" << std::endl;
 	if (this->_chunkHexState == 2)
 	{
 		int i = 0;
@@ -504,7 +469,6 @@ int Handler::HandlePost(char *body, int bytesreceived)
 
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
 	{
-		// std::cout << "~~~~~~~~~~~~~ initial bytesreceived: " << bytesreceived << " ~~~~~~~~~~~\n";
 		returnVal = this->chunkedPost(body, bytesreceived);
 	}
 	else

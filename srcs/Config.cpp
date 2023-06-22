@@ -3,7 +3,7 @@
 //ServerLocation OCF
 ServerLocation::ServerLocation()
 {
-    _RedirectionInfo.RedirectionFlag = FALSE;
+    _RedirectionInfo.RedirectionFlag = false;
     _RedirectionInfo.RedirectionCode = "n/a";
     _RedirectionInfo.RedirectionPath = "n/a";
 
@@ -466,7 +466,7 @@ void    ServerConfig::ParseServerLocation(std::string location)
     key_pos = location.find("return ");
     if (key_pos >= 0)
     {
-        location_tmp._RedirectionInfo.RedirectionFlag = TRUE;
+        location_tmp._RedirectionInfo.RedirectionFlag = true;
         value_pos = location.find(";", key_pos + 1);
         if (value_pos < 0)
             InvalidConfigFile("Invalid config file : There was an error (Find Redirection).");
@@ -518,7 +518,7 @@ void    GlobalConfig::PrintServerConfig(unsigned int index)
             std::cout << "Server name               : " << _ServersConfigVec[index].GetServerNames() << "\n";
         std::cout << "Server client body size   : " << _ServersConfigVec[index].GetClientBodySize() << "\n";
 
-         if (_ServersConfigVec[index].GetErrorPageMap().empty() == FALSE)
+         if (_ServersConfigVec[index].GetErrorPageMap().empty() == false)
          {
              std::map<std::string, std::string>::iterator it;
 
@@ -570,7 +570,7 @@ void    GlobalConfig::PrintServerConfig(unsigned int index)
 
         std::cout << "\n";
         
-        if (_LocationsVec[index].GetRedirectionInfo().RedirectionFlag == TRUE)
+        if (_LocationsVec[index].GetRedirectionInfo().RedirectionFlag == true)
         {
             std::cout << "Redirection code          : " << _LocationsVec[index].GetRedirectionInfo().RedirectionCode << "\n";
             std::cout << "Redirection path          : " << _LocationsVec[index].GetRedirectionInfo().RedirectionPath << "\n";
