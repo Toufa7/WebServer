@@ -20,7 +20,7 @@
 class Handler
 {
 	public:
-		Handler();
+		void 	setData();
 		std::string	GetRootLocation(std::string uri, std::string locationPath, std::string root);
 		int			Driver(char *requested_data, int bytesreceived);
 		std::string	getRequestMethod();
@@ -55,7 +55,6 @@ class Handler
 		int 		_postFileFd;
 		int 		_headerflag;
 		int			_cgiPid;
-		// char 		**_cgiEnv;
 
 
 		/*

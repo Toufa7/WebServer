@@ -2,7 +2,13 @@
 
 //  ------------- CONSTRUCTOR && DESTRUCTOR --------------------
 
-Handler::Handler()
+/*
+1070440448
+1118990
+534000247
+33472529
+*/
+void Handler::setData()
 {
 	this->_postFileFd = -1;
 	this->_headerflag = 0;
@@ -10,6 +16,7 @@ Handler::Handler()
 	this->_postRecv = 0;
 	this->_chunkHexState = 0;
 	this->_cgiPid = -1;
+	std::cout << "Handler constructer client soc: " << this->client_socket << std::endl;
 }
 
 //  ------------- ACCESSOR --------------------
@@ -35,6 +42,7 @@ void Handler::setConfig(ServerConfig &config)
 
 int Handler::Driver(char *requested_data, int bytesreceived)
 {
+	// std::cout << "client soc: " << this->client_socket <<  " | _headerflag: " << _headerflag << std::endl;
 	int re = 1;
 	if (this->_headerflag == 0)
 		re = this->parseRequestHeader(requested_data, bytesreceived);
@@ -340,12 +348,25 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 	// 1: in the hex number
 	// 2: in the \r\n after the hex
 
+
+	// std::cout << "=================================================\n" << std::endl;
+	// std::cout << "Fildes -> " << this->_postFileFd << std::endl;
+	// std::cout << "bytesreceived -> " << bytesreceived << std::endl;
+	// std::cout << "this->_chunkSize -> " << this->_chunkSize << std::endl;
+	// std::cout << "this->_chunkHexState -> " << this->_chunkHexState<< std::endl;
+	// std::cout << "*************** body stsrt *****************\n" << std::endl;
+	// std::cout << body << std::endl;
+	// std::cout << "*************** body end   *****************\n" << std::endl;
 	if (this->_chunkHexState == 2)
 	{
 		int i = 0;
 		while (this->_chunkHexState == 2 && i < bytesreceived && (body[i] == '\r' || body[i] == '\n'))
 			i++;
 		this->_chunkHexState = 0;
+
+		if (bytesreceived - i <= 0)
+			return 1;
+
 		body += i, bytesreceived -= i;
 	}
 	if (this->_chunkSize <= 0)
@@ -394,8 +415,10 @@ int Handler::chunkedPost(char *body, int bytesreceived)
 		this->_chunkSize -= bytesreceived;
 		return 1;
 	}
-	else if (this->_chunkSize > 0)
+	else if (this->_chunkSize > 0 )
 	{
+		if (bytesreceived == 0)
+			return 1;
 		write(this->_postFileFd, body, this->_chunkSize);
 		bytesreceived -= this->_chunkSize;
 		body += this->_chunkSize;
@@ -480,7 +503,10 @@ int Handler::HandlePost(char *body, int bytesreceived)
 
 
 	if (this->_req_header.find("Transfer-Encoding") != this->_req_header.end())
+	{
+		// std::cout << "~~~~~~~~~~~~~ initial bytesreceived: " << bytesreceived << " ~~~~~~~~~~~\n";
 		returnVal = this->chunkedPost(body, bytesreceived);
+	}
 	else
 	{
 		long long remmining = std::stoll(this->_req_header["Content-Length"]) - this->_postRecv;

@@ -1,8 +1,10 @@
 #!/bin/bash
 
-for i in `seq 20`
-do
-    randomstring=$(cat /dev/urandom | LC_CTYPE=C tr -dc '0-9' | fold -w 10 | head -n 1)
-    curl --head -i --request GET http://127.0.0.1:8080/www/
-done
 
+curl --location 'http://localhost:8080/post' --header 'Transfer-Encoding: chunked' --header 'Content-Type: text/plain' --data '@/Users/abouchfa/Desktop/a.txt'
+
+curl --location 'http://localhost:8080/post' --header 'Transfer-Encoding: chunked' --header 'Content-Type: image/jpeg'  --data '@/Users/abouchfa/Desktop/img1.jpg'
+
+curl --location 'http://localhost:8080/post' --header 'Transfer-Encoding: chunked' --header 'Content-Type: video/mp4' --data '@/Users/abouchfa/Desktop/video1.mp4'
+
+curl --location 'http://localhost:8080/post' --header 'Transfer-Encoding: chunked' --header 'Content-Type: text/plain' --data '@/Users/abouchfa/Desktop/txt.txt'
