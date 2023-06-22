@@ -1,4 +1,4 @@
-NAME = Server
+NAME = Webserv
 CC = c++
 CFLAGS = -std=c++98 -Wall -Wextra -Werror
 MKFL = Makefile
