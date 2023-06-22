@@ -62,7 +62,6 @@ char **Handler::CgiSetEnv(std::string method)
 	if (this->_req_header.find("Cookie") != this->_req_header.end())
         HTTP_COOKIE += this->_req_header["Cookie"];
 
-    std::cout << "Cooki e -> " << HTTP_COOKIE << std::endl;
     if (!this->_querystring.empty())
         QUERY_STRING += this->_querystring;
 
@@ -91,20 +90,19 @@ char **Handler::CgiSetEnv(std::string method)
 }
 
 
-int Handler::HandleCgi(std::string path, std::string method, int header_flag, cgi &cgitype)
+int Handler::HandleCgi(std::string path, std::string method, cgi &cgitype)
 {
     int outFd;
     std::string Buf, Header, Body, tmpfilename;
     struct stat s;
 
-    std::cout << "Handle GGI -> " << cgitype.path << "\n";
+    // std::cout << "Handle GGI -> " << cgitype.path << " for " << method <<  " method, pid is " << this->_cgiPid <<  std::endl;
 
     if (stat(path.c_str(), &s) == 0 && (s.st_mode & S_IFREG))
     {
-        if (header_flag == 0)
+        if (this->_cgiPid == -1)
         {
-            char **newEnv = CgiSetEnv(method);
-
+            char **env = CgiSetEnv(method);
 
             tmpfilename = this->_shared.generateFileName("/tmp/", "");
             outFd = open(tmpfilename.c_str(), O_CREAT | O_RDWR | O_TRUNC , 0777);
@@ -115,16 +113,16 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             }
             //this may cause back and forth calling if you add return
             this->_cgiTmpFileName = tmpfilename;
-            
-            std::cout << "cgitype.path: " << cgitype.path << std::endl;
-            std::cout << "scrip   path: " << path << std::endl;
-            std::cout << "in file path: " << this->_postFilePath << std::endl;
-            std::cout << "ou file path: " << tmpfilename << std::endl;
+
+            // std::cout << "cgitype.path: " << cgitype.path << std::endl;
+            // std::cout << "scrip   path: " << path << std::endl;
+            // std::cout << "in file path: " << this->_postFilePath << std::endl;
+            // std::cout << "ou file path: " << tmpfilename << std::endl;
 
             //PHP Script child process
             char *excearr[] = {const_cast<char *>(cgitype.path.c_str()), const_cast<char *>(path.c_str()), NULL};
-            pid_t pid = fork();
-            if (pid == 0)
+            this->_cgiPid = fork();
+            if (this->_cgiPid  == 0)
             {
                 if (method == "POST")
                 {
@@ -134,16 +132,16 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
                 }
                 dup2(outFd, 1);
                 close(outFd);
-                execve(excearr[0], excearr, newEnv);
+                execve(excearr[0], excearr, env);
             }
-            wait(0);
-           
-
-            //Free env
-            for (unsigned int i = 0; newEnv[i] != NULL; i++)
-                delete newEnv[i];
-            delete newEnv;
-            
+            // Free env
+            for (unsigned int i = 0; env[i] != NULL; i++)
+                delete env[i];
+            delete env;
+        }
+        
+        if (this->_cgiPid != -1 && waitpid(this->_cgiPid, NULL, WNOHANG) == this->_cgiPid)
+        {
             //Reading tmp file
             std::ifstream TmpOutFile(this->_cgiTmpFileName.c_str());
             if (!TmpOutFile)
@@ -152,11 +150,10 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
                 return (0);
             }
             std::stringstream ss;
-			ss << TmpOutFile.rdbuf();
+		    ss << TmpOutFile.rdbuf();
             Buf = ss.str();
             ss.clear();
             TmpOutFile.close();
-
             // Parse header
             Header = Buf.substr(0, Buf.find("\r\n\r\n"));
             if (Header.length() + 4 < Buf.length())
@@ -167,11 +164,19 @@ int Handler::HandleCgi(std::string path, std::string method, int header_flag, cg
             Buf.append(CgiBodySize(Body.length()));
             Buf.append("\r\n\r\n");
             Buf.append(Body);
-
             if (send(this->client_socket, Buf.c_str(), Buf.size(), 0) == -1)
                 perror("Error : Send <Response Header>  -> ");
-            return 0;
             remove(tmpfilename.c_str());
+            if (method == "POST")
+                remove(this->_postFilePath.c_str());
+            this->_cgiPid = -1;
+
+            return 0;
+        }
+        else if (this->_cgiPid != -1 && waitpid(this->_cgiPid, NULL, WNOHANG) == -1)
+        {
+            this->sendCodeResponse("500");
+            return (0);
         }
     }
     else

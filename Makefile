@@ -1,6 +1,6 @@
 NAME = Server
 CC = c++
-CFLAGS = -std=c++98 -Wall -Wextra -Werror -g -fsanitize=address
+CFLAGS = -std=c++98 -Wall -Wextra -Werror
 MKFL = Makefile
 
 FILES = main.cpp \

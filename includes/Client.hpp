@@ -14,6 +14,7 @@ class Client
         {
             _socket = socket;
             _client_handler.client_socket = socket;
+            _client_handler.setData();
         }
         int GetCltSocket()
         {

@@ -20,11 +20,9 @@
 class Handler
 {
 	public:
-		Handler();
+		void 	setData();
 		std::string	GetRootLocation(std::string uri, std::string locationPath, std::string root);
 		int			Driver(char *requested_data, int bytesreceived);
-		std::string	getRequestMethod();
-		std::string	getRequestURI();
 		void		setConfig(ServerConfig &config);
 
 		int			_cgiTmpFilefd;
@@ -54,6 +52,7 @@ class Handler
 		int 		_chunkSize;
 		int 		_postFileFd;
 		int 		_headerflag;
+		int			_cgiPid;
 
 
 		/*
@@ -64,12 +63,11 @@ class Handler
 		int		HandleDelete();
 		int 	HandlePost(char *body, int bytesreceived);
 		int		chunkedPost(char *body, int bytesreceived);
-		int		HandleCgi(std::string path, std::string method, int header_flag, cgi &cgitype);
+		int		HandleCgi(std::string path, std::string method, cgi &cgitype);
 		char	**CgiSetEnv(std::string method);
 		bool	ValidateRequest();
 		bool	MatchLocation();
 		bool	ValidateURI(const std::string &uri);
-		void	printRequstData();
 		void	SendResponseHeader(std::string statusCode, std::string fileExt, std::string location, int contentLength);
 		void	sendCodeResponse(std::string statusCode);
 		void	DeleteFile(const char *path);

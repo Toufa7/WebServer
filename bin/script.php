@@ -3,7 +3,7 @@
     if(isset($_FILES['files'])){
         $errors= array();
         $uploadedFiles = $_FILES['files'];
-        $uploadDirectory = '../upload/';
+        $uploadDirectory = '../uploads/';
         foreach($uploadedFiles['tmp_name'] as $key => $tmp_name ){
             $file_name = $uploadedFiles['name'][$key];
             $file_size = $uploadedFiles['size'][$key];

@@ -32,7 +32,7 @@ int main(int ac, char **av)
         servers.push_back(WebServer);
     }
 
-    while (TRUE)
+    while (true)
     {
         for (size_t i = 0; i < servers.size(); i++)
             servers[i].Start();

@@ -1,20 +1,5 @@
 #include "../includes/Shared.hpp"
 
-Exceptions::Exceptions(std::string error_message) : _error_message(error_message)
-{
-	// Exceptions class constructor
-}
-
-const char *Exceptions::what() const throw()
-{
-	return (_error_message.c_str());
-}
-
-Exceptions::~Exceptions() throw()
-{
-	// Exceptions class destructor
-}
-
 Shared::Shared()
 {
 	this->file_extensions["text/html"]= ".html";
@@ -61,6 +46,7 @@ Shared::Shared()
 	this->file_extensions["application/octet-stream"] = ".bin";
 	this->file_extensions["application/x-perl"] = ".pl";
 	this->file_extensions["application/x-httpd-php"] = ".php";
+	this->file_extensions["video/quicktime"] = ".mov";
 
 	// MIME Types
 	this->mime_types[".html"]	= "text/html";
@@ -111,6 +97,7 @@ Shared::Shared()
 	this->mime_types[".bin"]	= "application/octet-stream";
 	this->mime_types[".php"]	= "application/x-httpd-php";
 	this->mime_types[".pl"]		= "application/x-perl";
+	this->mime_types[".mov"]	= "video/quicktime";
 
 	// Status codes
 	this->status_codes["100"] = "Continue";

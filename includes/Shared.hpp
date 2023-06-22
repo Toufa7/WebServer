@@ -1,10 +1,6 @@
 #ifndef SHARED_HPP
 #define SHARED_HPP
 
-#define FALSE 0
-#define TRUE 1
-
-
 #include <iostream>
 #include <map>
 #include <cstring>
