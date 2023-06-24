@@ -7,7 +7,7 @@
 ## DELETE Method Implementation :
 
 <p align="center">
-<img src="./explanation/delete.jpg width="1000">
+<img src="./explanation/delete.jpg" width="1000">
 
 ## GET Method Implementation :
 
