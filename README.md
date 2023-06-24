@@ -1,28 +1,17 @@
 # Webserv
-Making an HTTP WebServer in C from scratch!
 
-OOP in our Webserver :
+<p align="center">
+<img src="./explanation/fds.jpg" width="600">
 
-	class Server 
-  	{
-	// Setuping and startig the server : Creating socket -> binding -> listening (Handling multiple clients)
-	}
-  
-  	class Handler
-  	{
-	// Parse request -> validate request content -> match methed --> send response
-	}
-	
-	class Client
-  	{
-	// Everything related to each client : ...(not sure yet)
-  	}
 
-	class Shared
-  	{
-	// Shared resources such as mime-types map, status codes map or other data structures that are used by multiple parts of the server.
-  	}
+## DELETE Method Implementation :
 
+<p align="center">
+<img src="./explanation/delete.jpg width="1000">
+
+## GET Method Implementation :
+
+## POST Method Implementation :
 
 
 # Resources
