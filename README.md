@@ -48,6 +48,9 @@ https://www.gnu.org/software/libc/manual/html_node/Directory-Entries.html
 
 ## POST Method Implementation :
 
+<p align="center">
+<img src="./explanation/post.jpg" width="1000">
+
 
 # Resources
 
