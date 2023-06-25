@@ -42,6 +42,10 @@ https://www.gnu.org/software/libc/manual/html_node/Directory-Entries.html
 
 ## GET Method Implementation :
 
+<p align="center">
+<img src="./explanation/get.jpg" width="1000">
+
+
 ## POST Method Implementation :
 
 
