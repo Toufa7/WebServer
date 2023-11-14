@@ -1,5 +1,7 @@
 # Webserv
+Building a web server from scratch using C++, employing server analogy and implementing multiplexing using select() for better handling of simultaneous connections
 
+## How web server works:
 Explaining how a web server works using a call center analogy
 
 * Imagine the server as a call center where clients can call in and request information or resources
@@ -43,7 +45,7 @@ Explaining how a web server works using a call center analogy
 *********
 
 
-Here's the macros used in combination with the select function to monitor one or more file descriptors for I/O
+Here are the macros used in combination with the select function to monitor one or more file descriptors for I/O
 
 <p align="center">
 <img src="./explanation/fds.jpg" width="600">
@@ -120,4 +122,4 @@ https://stackoverflow.com/questions/5815675/what-is-sock-dgram-and-sock-stream
 
 ## TIPS:
 
-if you want to look for a manuel of any function use this website mkssoftware/qnx (eg: mkssoftware select)
+if you want to look for a manual of any function use this website mkssoftware/qnx (eg: mkssoftware select)
