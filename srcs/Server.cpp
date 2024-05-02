@@ -30,13 +30,13 @@ void    Server::CreateServer()
         perror("Error: SETSOCKOPT failed -> ");
     if (bind(server_socket, sinfo_ptr->ai_addr, sinfo_ptr->ai_addrlen) == -1)
     {
-        close(server_socket)
+        close(server_socket);
         perror("Error: BIND failed -> ");
         exit(1);
     }
     if (listen(server_socket, FD_SETSIZE) == -1)
     {
-        close(server_socket)
+        close(server_socket);
         perror("Error: LISTEN failed -> ");
         exit(1);
     }
