@@ -7,4 +7,9 @@ jobs:
     steps:
       - name: MegaLinter
         uses: oxsecurity/megalinter@v7.11.1
-            
+      - name: SonarCloud Scan for C and C++
+        uses: SonarSource/sonarcloud-github-c-cpp@v2.0.2
+        with:
+          installation-path: .sonar
+          cache-binaries: true
+          
